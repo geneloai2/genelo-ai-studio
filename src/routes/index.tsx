@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,10 +8,12 @@ import { ModeSelector } from "@/components/ModeSelector";
 import { Markdown } from "@/components/Markdown";
 import { chatWithGenelo, generateImage, getProfile } from "@/lib/genelo.functions";
 import { checkAdmin } from "@/lib/admin.functions";
-import { Sparkles, Send, Image as ImageIcon, LogOut, Crown, Loader2, Shield } from "lucide-react";
+import { saveChat, getChat } from "@/lib/chats.functions";
+import { Sparkles, Send, Image as ImageIcon, Crown, Loader2, Shield, Settings as SettingsIcon, Plus } from "lucide-react";
 import { toast, Toaster } from "sonner";
 
 export const Route = createFileRoute("/")({
+  validateSearch: (s: Record<string, unknown>) => ({ chat: typeof s.chat === "string" ? s.chat : undefined }),
   head: () => ({
     meta: [
       { title: "Genelo AI — Code, research, images, calculations" },
@@ -30,6 +32,7 @@ type Msg = { role: "user" | "assistant"; content: string; image?: string };
 function HomePage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const search = useSearch({ from: "/" }) as { chat?: string };
   const [mode, setMode] = useState<ModeId>("gn35");
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
@@ -37,12 +40,15 @@ function HomePage() {
   const [imgMode, setImgMode] = useState(false);
   const [profile, setProfile] = useState<{ plan: string } | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [chatId, setChatId] = useState<string | undefined>(undefined);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const chatFn = useServerFn(chatWithGenelo);
   const imgFn = useServerFn(generateImage);
   const profileFn = useServerFn(getProfile);
   const adminCheckFn = useServerFn(checkAdmin);
+  const saveFn = useServerFn(saveChat);
+  const getChatFn = useServerFn(getChat);
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/login" });
@@ -53,6 +59,17 @@ function HomePage() {
     profileFn().then((r) => setProfile(r.profile ?? { plan: "free" }));
     adminCheckFn().then((r) => setIsAdmin(r.isAdmin)).catch(() => setIsAdmin(false));
   }, [user, profileFn, adminCheckFn]);
+
+  // Load chat from ?chat=
+  useEffect(() => {
+    if (!user || !search.chat) return;
+    getChatFn({ data: { id: search.chat } }).then((r) => {
+      if (r.chat) {
+        setChatId(r.chat.id);
+        setMessages((r.chat.messages as any) ?? []);
+      }
+    });
+  }, [user, search.chat, getChatFn]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 9e9, behavior: "smooth" });
