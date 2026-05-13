@@ -81,34 +81,50 @@ function HomePage() {
     const text = input.trim();
     if (!text || busy) return;
     const userMsg: Msg = { role: "user", content: text };
-    setMessages((m) => [...m, userMsg]);
+    const baseMessages = [...messages, userMsg];
+    setMessages(baseMessages);
     setInput("");
     setBusy(true);
 
+    let finalMessages = baseMessages;
     try {
       if (imgMode) {
         const r = await imgFn({ data: { modeId: mode, prompt: text } });
         if (!r.ok) {
           toast.error(r.error);
-          setMessages((m) => [...m, { role: "assistant", content: `⚠️ ${r.error}` }]);
+          finalMessages = [...baseMessages, { role: "assistant", content: `⚠️ ${r.error}` }];
         } else {
-          setMessages((m) => [
-            ...m,
+          finalMessages = [
+            ...baseMessages,
             { role: "assistant", content: "Here's your image:", image: r.url },
-          ]);
+          ];
         }
+        setMessages(finalMessages);
       } else {
-        const history = [...messages, userMsg].map((x) => ({
-          role: x.role,
-          content: x.content,
-        }));
+        const history = baseMessages.map((x) => ({ role: x.role, content: x.content }));
         const r = await chatFn({ data: { modeId: mode, messages: history } });
         if (!r.ok) {
           toast.error(r.error);
-          setMessages((m) => [...m, { role: "assistant", content: `⚠️ ${r.error}` }]);
+          finalMessages = [...baseMessages, { role: "assistant", content: `⚠️ ${r.error}` }];
         } else {
-          setMessages((m) => [...m, { role: "assistant", content: r.content }]);
+          finalMessages = [...baseMessages, { role: "assistant", content: r.content }];
         }
+        setMessages(finalMessages);
+      }
+
+      // Persist chat history
+      try {
+        const title = (chatId ? undefined : text.slice(0, 60)) ?? "Chat";
+        const r = await saveFn({
+          data: {
+            id: chatId,
+            title: chatId ? "Chat" : text.slice(0, 60) || "New chat",
+            messages: finalMessages as any,
+          },
+        });
+        if (!chatId) setChatId(r.id);
+      } catch (e) {
+        console.error("save chat failed", e);
       }
     } catch (e) {
       console.error(e);
