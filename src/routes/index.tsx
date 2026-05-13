@@ -49,8 +49,10 @@ function HomePage() {
   }, [loading, user, navigate]);
 
   useEffect(() => {
-    if (user) profileFn().then((r) => setProfile(r.profile ?? { plan: "free" }));
-  }, [user, profileFn]);
+    if (!user) return;
+    profileFn().then((r) => setProfile(r.profile ?? { plan: "free" }));
+    adminCheckFn().then((r) => setIsAdmin(r.isAdmin)).catch(() => setIsAdmin(false));
+  }, [user, profileFn, adminCheckFn]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 9e9, behavior: "smooth" });
