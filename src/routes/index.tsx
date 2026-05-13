@@ -168,15 +168,25 @@ function HomePage() {
               </span>
             )}
             <button
-              onClick={async () => {
-                await supabase.auth.signOut();
-                navigate({ to: "/login" });
+              onClick={() => {
+                setChatId(undefined);
+                setMessages([]);
+                navigate({ to: "/", search: {} as any });
               }}
               className="rounded-full p-2 text-muted-foreground hover:bg-muted"
-              aria-label="Sign out"
+              aria-label="New chat"
+              title="New chat"
             >
-              <LogOut className="h-4 w-4" />
+              <Plus className="h-4 w-4" />
             </button>
+            <Link
+              to="/settings"
+              className="rounded-full p-2 text-muted-foreground hover:bg-muted"
+              aria-label="Settings"
+              title="Settings"
+            >
+              <SettingsIcon className="h-4 w-4" />
+            </Link>
           </div>
         </div>
         <div className="mx-auto max-w-4xl px-4 pb-3">
