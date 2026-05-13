@@ -36,11 +36,13 @@ function HomePage() {
   const [busy, setBusy] = useState(false);
   const [imgMode, setImgMode] = useState(false);
   const [profile, setProfile] = useState<{ plan: string } | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const chatFn = useServerFn(chatWithGenelo);
   const imgFn = useServerFn(generateImage);
   const profileFn = useServerFn(getProfile);
+  const adminCheckFn = useServerFn(checkAdmin);
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/login" });
