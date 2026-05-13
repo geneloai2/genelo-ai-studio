@@ -55,8 +55,12 @@ function HomePage() {
 
   useEffect(() => {
     if (!user) return;
-    profileFn().then((r) => setProfile(r.profile ?? { plan: "free" }));
-    adminCheckFn().then((r) => setIsAdmin(r.isAdmin)).catch(() => setIsAdmin(false));
+    profileFn()
+      .then((r) => setProfile(r.profile ?? { plan: "free" }))
+      .catch(() => setProfile({ plan: "free" }));
+    adminCheckFn()
+      .then((r) => setIsAdmin(r.isAdmin))
+      .catch(() => setIsAdmin(false));
   }, [user, profileFn, adminCheckFn]);
 
   // Load chat from ?chat=
