@@ -129,6 +129,14 @@ function HomePage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {isAdmin && (
+              <Link
+                to="/admin"
+                className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent"
+              >
+                <Shield className="h-3.5 w-3.5" /> Admin
+              </Link>
+            )}
             {!isPro && (
               <Link
                 to="/pricing"
