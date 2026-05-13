@@ -7,7 +7,8 @@ import { MODES, type ModeId, getMode } from "@/lib/modes";
 import { ModeSelector } from "@/components/ModeSelector";
 import { Markdown } from "@/components/Markdown";
 import { chatWithGenelo, generateImage, getProfile } from "@/lib/genelo.functions";
-import { Sparkles, Send, Image as ImageIcon, LogOut, Crown, Loader2 } from "lucide-react";
+import { checkAdmin } from "@/lib/admin.functions";
+import { Sparkles, Send, Image as ImageIcon, LogOut, Crown, Loader2, Shield } from "lucide-react";
 import { toast, Toaster } from "sonner";
 
 export const Route = createFileRoute("/")({
