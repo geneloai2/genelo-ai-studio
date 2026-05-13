@@ -75,11 +75,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "Genelo AI — Code, research, images & answers" },
       { name: "description", content: "Genelo AI: a professional AI for front-end coding in any language, research, teaching, image generation, Q&A and calculations." },
       { name: "author", content: "Genelo AI" },
-      { property: "og:title", content: "Genelo AI" },
-      { property: "og:description", content: "Code in any language, research, teach, generate images, answer questions and do calculations — professionally." },
+      { property: "og:title", content: "Genelo AI — Code, research, images & answers" },
+      { property: "og:description", content: "Genelo AI: a professional AI for front-end coding in any language, research, teaching, image generation, Q&A and calculations." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "Genelo AI — Code, research, images & answers" },
+      { name: "twitter:description", content: "Genelo AI: a professional AI for front-end coding in any language, research, teaching, image generation, Q&A and calculations." },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/e9a8aca5-428f-4bab-a058-c911e0b5d150" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/e9a8aca5-428f-4bab-a058-c911e0b5d150" },
     ],
     links: [
       {
