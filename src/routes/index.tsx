@@ -1,17 +1,18 @@
 import { useEffect, useRef, useState } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useAuth } from "@/hooks/use-auth";
-import { supabase } from "@/integrations/supabase/client";
-import { MODES, type ModeId, getMode } from "@/lib/modes";
+import { type ModeId, getMode } from "@/lib/modes";
 import { ModeSelector } from "@/components/ModeSelector";
 import { Markdown } from "@/components/Markdown";
 import { chatWithGenelo, generateImage, getProfile } from "@/lib/genelo.functions";
 import { checkAdmin } from "@/lib/admin.functions";
-import { Sparkles, Send, Image as ImageIcon, LogOut, Crown, Loader2, Shield } from "lucide-react";
+import { saveChat, getChat } from "@/lib/chats.functions";
+import { Sparkles, Send, Image as ImageIcon, Crown, Loader2, Shield, Settings as SettingsIcon, Plus } from "lucide-react";
 import { toast, Toaster } from "sonner";
 
 export const Route = createFileRoute("/")({
+  validateSearch: (s: Record<string, unknown>) => ({ chat: typeof s.chat === "string" ? s.chat : undefined }),
   head: () => ({
     meta: [
       { title: "Genelo AI — Code, research, images, calculations" },
@@ -30,6 +31,7 @@ type Msg = { role: "user" | "assistant"; content: string; image?: string };
 function HomePage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const search = useSearch({ from: "/" }) as { chat?: string };
   const [mode, setMode] = useState<ModeId>("gn35");
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
@@ -37,12 +39,15 @@ function HomePage() {
   const [imgMode, setImgMode] = useState(false);
   const [profile, setProfile] = useState<{ plan: string } | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [chatId, setChatId] = useState<string | undefined>(undefined);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const chatFn = useServerFn(chatWithGenelo);
   const imgFn = useServerFn(generateImage);
   const profileFn = useServerFn(getProfile);
   const adminCheckFn = useServerFn(checkAdmin);
+  const saveFn = useServerFn(saveChat);
+  const getChatFn = useServerFn(getChat);
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/login" });
@@ -54,6 +59,17 @@ function HomePage() {
     adminCheckFn().then((r) => setIsAdmin(r.isAdmin)).catch(() => setIsAdmin(false));
   }, [user, profileFn, adminCheckFn]);
 
+  // Load chat from ?chat=
+  useEffect(() => {
+    if (!user || !search.chat) return;
+    getChatFn({ data: { id: search.chat } }).then((r) => {
+      if (r.chat) {
+        setChatId(r.chat.id);
+        setMessages((r.chat.messages as any) ?? []);
+      }
+    });
+  }, [user, search.chat, getChatFn]);
+
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 9e9, behavior: "smooth" });
   }, [messages, busy]);
@@ -64,34 +80,50 @@ function HomePage() {
     const text = input.trim();
     if (!text || busy) return;
     const userMsg: Msg = { role: "user", content: text };
-    setMessages((m) => [...m, userMsg]);
+    const baseMessages = [...messages, userMsg];
+    setMessages(baseMessages);
     setInput("");
     setBusy(true);
 
+    let finalMessages = baseMessages;
     try {
       if (imgMode) {
         const r = await imgFn({ data: { modeId: mode, prompt: text } });
         if (!r.ok) {
           toast.error(r.error);
-          setMessages((m) => [...m, { role: "assistant", content: `⚠️ ${r.error}` }]);
+          finalMessages = [...baseMessages, { role: "assistant", content: `⚠️ ${r.error}` }];
         } else {
-          setMessages((m) => [
-            ...m,
+          finalMessages = [
+            ...baseMessages,
             { role: "assistant", content: "Here's your image:", image: r.url },
-          ]);
+          ];
         }
+        setMessages(finalMessages);
       } else {
-        const history = [...messages, userMsg].map((x) => ({
-          role: x.role,
-          content: x.content,
-        }));
+        const history = baseMessages.map((x) => ({ role: x.role, content: x.content }));
         const r = await chatFn({ data: { modeId: mode, messages: history } });
         if (!r.ok) {
           toast.error(r.error);
-          setMessages((m) => [...m, { role: "assistant", content: `⚠️ ${r.error}` }]);
+          finalMessages = [...baseMessages, { role: "assistant", content: `⚠️ ${r.error}` }];
         } else {
-          setMessages((m) => [...m, { role: "assistant", content: r.content }]);
+          finalMessages = [...baseMessages, { role: "assistant", content: r.content }];
         }
+        setMessages(finalMessages);
+      }
+
+      // Persist chat history
+      try {
+        const title = (chatId ? undefined : text.slice(0, 60)) ?? "Chat";
+        const r = await saveFn({
+          data: {
+            id: chatId,
+            title: chatId ? "Chat" : text.slice(0, 60) || "New chat",
+            messages: finalMessages as any,
+          },
+        });
+        if (!chatId) setChatId(r.id);
+      } catch (e) {
+        console.error("save chat failed", e);
       }
     } catch (e) {
       console.error(e);
@@ -151,15 +183,25 @@ function HomePage() {
               </span>
             )}
             <button
-              onClick={async () => {
-                await supabase.auth.signOut();
-                navigate({ to: "/login" });
+              onClick={() => {
+                setChatId(undefined);
+                setMessages([]);
+                navigate({ to: "/", search: {} as any });
               }}
               className="rounded-full p-2 text-muted-foreground hover:bg-muted"
-              aria-label="Sign out"
+              aria-label="New chat"
+              title="New chat"
             >
-              <LogOut className="h-4 w-4" />
+              <Plus className="h-4 w-4" />
             </button>
+            <Link
+              to="/settings"
+              className="rounded-full p-2 text-muted-foreground hover:bg-muted"
+              aria-label="Settings"
+              title="Settings"
+            >
+              <SettingsIcon className="h-4 w-4" />
+            </Link>
           </div>
         </div>
         <div className="mx-auto max-w-4xl px-4 pb-3">
