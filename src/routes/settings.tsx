@@ -50,11 +50,15 @@ function SettingsPage() {
 
   useEffect(() => {
     if (!user) return;
-    listFn().then((r) => {
-      setChats(r.chats);
-      setLoadingChats(false);
-    });
-    profileFn().then((r) => setProfile(r.profile as any));
+    listFn()
+      .then((r) => {
+        setChats(r.chats);
+        setLoadingChats(false);
+      })
+      .catch(() => setLoadingChats(false));
+    profileFn()
+      .then((r) => setProfile(r.profile as any))
+      .catch(() => setProfile(null));
   }, [user, listFn, profileFn]);
 
   async function remove(id: string) {
