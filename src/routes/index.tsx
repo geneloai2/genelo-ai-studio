@@ -7,7 +7,8 @@ import { MODES, type ModeId, getMode } from "@/lib/modes";
 import { ModeSelector } from "@/components/ModeSelector";
 import { Markdown } from "@/components/Markdown";
 import { chatWithGenelo, generateImage, getProfile } from "@/lib/genelo.functions";
-import { Sparkles, Send, Image as ImageIcon, LogOut, Crown, Loader2 } from "lucide-react";
+import { checkAdmin } from "@/lib/admin.functions";
+import { Sparkles, Send, Image as ImageIcon, LogOut, Crown, Loader2, Shield } from "lucide-react";
 import { toast, Toaster } from "sonner";
 
 export const Route = createFileRoute("/")({
@@ -35,19 +36,23 @@ function HomePage() {
   const [busy, setBusy] = useState(false);
   const [imgMode, setImgMode] = useState(false);
   const [profile, setProfile] = useState<{ plan: string } | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const chatFn = useServerFn(chatWithGenelo);
   const imgFn = useServerFn(generateImage);
   const profileFn = useServerFn(getProfile);
+  const adminCheckFn = useServerFn(checkAdmin);
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/login" });
   }, [loading, user, navigate]);
 
   useEffect(() => {
-    if (user) profileFn().then((r) => setProfile(r.profile ?? { plan: "free" }));
-  }, [user, profileFn]);
+    if (!user) return;
+    profileFn().then((r) => setProfile(r.profile ?? { plan: "free" }));
+    adminCheckFn().then((r) => setIsAdmin(r.isAdmin)).catch(() => setIsAdmin(false));
+  }, [user, profileFn, adminCheckFn]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 9e9, behavior: "smooth" });
@@ -124,6 +129,14 @@ function HomePage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {isAdmin && (
+              <Link
+                to="/admin"
+                className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent"
+              >
+                <Shield className="h-3.5 w-3.5" /> Admin
+              </Link>
+            )}
             {!isPro && (
               <Link
                 to="/pricing"
