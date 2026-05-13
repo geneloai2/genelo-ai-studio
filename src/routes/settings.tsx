@@ -52,7 +52,7 @@ function SettingsPage() {
     if (!user) return;
     listFn()
       .then((r) => {
-        setChats(r.chats);
+        setChats(r?.chats ?? []);
         setLoadingChats(false);
       })
       .catch(() => setLoadingChats(false));
