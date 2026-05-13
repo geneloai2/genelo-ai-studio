@@ -27,13 +27,12 @@ function LoginPage() {
     setBusy(true);
     try {
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { emailRedirectTo: window.location.origin },
-        });
+        const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
-        toast.success("Account created. Check your email to confirm.");
+        const { error: e2 } = await supabase.auth.signInWithPassword({ email, password });
+        if (e2) throw e2;
+        toast.success("Welcome to Genelo AI!");
+        navigate({ to: "/" });
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;

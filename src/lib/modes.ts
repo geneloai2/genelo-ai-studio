@@ -26,7 +26,7 @@ export const MODES: Mode[] = [
     tag: "Super",
     description: "Faster and smarter. 10 free images per day.",
     imageLimit: 10,
-    model: "google/gemini-3-flash-preview",
+    model: "google/gemini-2.5-flash",
     pro: false,
   },
   {
@@ -35,7 +35,7 @@ export const MODES: Mode[] = [
     tag: "Pro",
     description: "Super speed, full features, no daily limits.",
     imageLimit: 9999,
-    model: "google/gemini-2.5-pro",
+    model: "google/gemini-3-flash-preview",
     pro: true,
   },
   {
