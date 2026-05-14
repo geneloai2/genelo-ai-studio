@@ -189,7 +189,7 @@ export const getProfile = createServerFn({ method: "POST" })
     const [{ data: profile }, { data: usage }] = await Promise.all([
       context.supabase
         .from("profiles")
-        .select("plan, email")
+        .select("plan, email, display_name, avatar_url")
         .eq("id", context.userId)
         .maybeSingle(),
       context.supabase
@@ -199,4 +199,25 @@ export const getProfile = createServerFn({ method: "POST" })
         .eq("day", today),
     ]);
     return { profile, usage: usage ?? [] };
+  });
+
+const UpdateProfileInput = z.object({
+  display_name: z.string().min(1).max(60).optional(),
+  avatar_url: z.string().url().max(1000).nullable().optional(),
+});
+
+export const updateProfile = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => UpdateProfileInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const patch: Record<string, unknown> = {};
+    if (data.display_name !== undefined) patch.display_name = data.display_name;
+    if (data.avatar_url !== undefined) patch.avatar_url = data.avatar_url;
+    if (Object.keys(patch).length === 0) return { ok: true as const };
+    const { error } = await context.supabase
+      .from("profiles")
+      .update(patch)
+      .eq("id", context.userId);
+    if (error) return { ok: false as const, error: error.message };
+    return { ok: true as const };
   });
