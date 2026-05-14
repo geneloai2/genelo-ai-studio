@@ -37,20 +37,23 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const mode = MODES.find((m) => m.id === data.modeId) ?? MODES[0];
 
-    // Gate Pro modes
-    if (mode.pro) {
-      const { data: profile } = await context.supabase
-        .from("profiles")
-        .select("plan")
-        .eq("id", context.userId)
-        .maybeSingle();
-      if (!profile || profile.plan !== "pro") {
-        return {
-          ok: false as const,
-          error: "This mode is Pro-only. Upgrade to Genelo Pro for TSh 1,200/month.",
-        };
-      }
+    const { data: profile } = await context.supabase
+      .from("profiles")
+      .select("plan, display_name, email")
+      .eq("id", context.userId)
+      .maybeSingle();
+
+    if (mode.pro && (!profile || profile.plan !== "pro")) {
+      return {
+        ok: false as const,
+        error: "This mode is Pro-only. Upgrade to Genelo Pro for TSh 1,200/month.",
+      };
     }
+
+    const name =
+      (profile?.display_name && profile.display_name.trim()) ||
+      (profile?.email ? profile.email.split("@")[0] : "friend");
+    const systemPrompt = SYSTEM.replace(/\{name\}/g, name);
 
     const key = process.env.LOVABLE_API_KEY;
     if (!key) return { ok: false as const, error: "AI not configured." };
@@ -63,7 +66,7 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
       },
       body: JSON.stringify({
         model: mode.model,
-        messages: [{ role: "system", content: SYSTEM }, ...data.messages],
+        messages: [{ role: "system", content: systemPrompt }, ...data.messages],
       }),
     });
 
