@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "@/hooks/use-theme";
 import { supabase } from "@/integrations/supabase/client";
 import { listChats, deleteChat } from "@/lib/chats.functions";
-import { getProfile } from "@/lib/genelo.functions";
+import { getProfile, updateProfile } from "@/lib/genelo.functions";
+import { MODES, type ModeId } from "@/lib/modes";
 import {
   ArrowLeft,
   Sun,
@@ -19,6 +20,10 @@ import {
   Loader2,
   Crown,
   User as UserIcon,
+  Camera,
+  Sparkles,
+  Save,
+  Lock,
 } from "lucide-react";
 import { toast, Toaster } from "sonner";
 
@@ -26,23 +31,34 @@ export const Route = createFileRoute("/settings")({
   head: () => ({
     meta: [
       { title: "Settings — Genelo AI" },
-      { name: "description", content: "Manage your Genelo AI profile, theme, chat history and learn about us." },
+      { name: "description", content: "Manage your Genelo AI profile, theme, AI model, chat history and more." },
     ],
   }),
   component: SettingsPage,
 });
+
+type Profile = { plan: string; email?: string | null; display_name?: string | null; avatar_url?: string | null };
 
 function SettingsPage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const { theme, toggle } = useTheme();
   const [chats, setChats] = useState<{ id: string; title: string; updated_at: string }[]>([]);
-  const [profile, setProfile] = useState<{ plan: string; email: string } | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loadingChats, setLoadingChats] = useState(true);
+  const [displayName, setDisplayName] = useState("");
+  const [savingName, setSavingName] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [mode, setMode] = useState<ModeId>(() => {
+    if (typeof window === "undefined") return "gn35";
+    return ((localStorage.getItem("genelo-mode") as ModeId) || "gn35") as ModeId;
+  });
 
   const listFn = useServerFn(listChats);
   const delFn = useServerFn(deleteChat);
   const profileFn = useServerFn(getProfile);
+  const updateProfileFn = useServerFn(updateProfile);
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/login" });
@@ -57,9 +73,65 @@ function SettingsPage() {
       })
       .catch(() => setLoadingChats(false));
     profileFn()
-      .then((r) => setProfile(r.profile as any))
+      .then((r) => {
+        const p = (r.profile as Profile) ?? null;
+        setProfile(p);
+        setDisplayName(p?.display_name ?? "");
+      })
       .catch(() => setProfile(null));
   }, [user, listFn, profileFn]);
+
+  function pickMode(m: ModeId, locked: boolean) {
+    if (locked) {
+      toast.error("This model is Pro-only. Upgrade to unlock.");
+      return;
+    }
+    setMode(m);
+    localStorage.setItem("genelo-mode", m);
+    toast.success(`AI model set to ${MODES.find((x) => x.id === m)?.name}`);
+  }
+
+  async function saveName() {
+    if (!displayName.trim()) return;
+    setSavingName(true);
+    try {
+      const r = await updateProfileFn({ data: { display_name: displayName.trim() } });
+      if (!r.ok) throw new Error(r.error);
+      setProfile((p) => (p ? { ...p, display_name: displayName.trim() } : p));
+      toast.success("Name saved");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to save name");
+    } finally {
+      setSavingName(false);
+    }
+  }
+
+  async function uploadAvatar(file: File) {
+    if (!user) return;
+    if (file.size > 4 * 1024 * 1024) {
+      toast.error("Image too large (max 4MB)");
+      return;
+    }
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+      const path = `${user.id}/avatar-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("avatars")
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
+      const url = pub.publicUrl;
+      const r = await updateProfileFn({ data: { avatar_url: url } });
+      if (!r.ok) throw new Error(r.error);
+      setProfile((p) => (p ? { ...p, avatar_url: url } : p));
+      toast.success("Profile picture updated");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   async function remove(id: string) {
     if (!confirm("Delete this chat?")) return;
@@ -75,6 +147,9 @@ function SettingsPage() {
       </div>
     );
   }
+
+  const isPro = profile?.plan === "pro";
+  const initial = (profile?.display_name || profile?.email || user.email || "G").slice(0, 1).toUpperCase();
 
   return (
     <div className="min-h-screen bg-background">
@@ -98,25 +173,110 @@ function SettingsPage() {
       </header>
 
       <main className="mx-auto max-w-3xl space-y-6 px-4 py-8">
+        {/* Profile */}
         <Section title="Profile" icon={<UserIcon className="h-4 w-4" />}>
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm font-medium">{profile?.email ?? user.email}</div>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+            <div className="relative">
+              {profile?.avatar_url ? (
+                <img
+                  src={profile.avatar_url}
+                  alt="Profile"
+                  className="h-20 w-20 rounded-full border border-border object-cover"
+                />
+              ) : (
+                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted text-2xl font-semibold text-foreground">
+                  {initial}
+                </div>
+              )}
+              <button
+                onClick={() => fileRef.current?.click()}
+                disabled={uploading}
+                className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full bg-foreground text-background shadow-md hover:opacity-90 disabled:opacity-50"
+                aria-label="Change photo"
+              >
+                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+              </button>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) uploadAvatar(f);
+                  if (fileRef.current) fileRef.current.value = "";
+                }}
+              />
+            </div>
+            <div className="flex-1 space-y-2">
+              <div className="text-xs text-muted-foreground">{profile?.email ?? user.email}</div>
+              <div className="flex gap-2">
+                <input
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="Your display name"
+                  className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
+                />
+                <button
+                  onClick={saveName}
+                  disabled={savingName || !displayName.trim()}
+                  className="inline-flex items-center gap-1 rounded-lg bg-foreground px-3 py-2 text-xs font-medium text-background disabled:opacity-50"
+                >
+                  {savingName ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                  Save
+                </button>
+              </div>
               <div className="text-xs text-muted-foreground">
-                Plan: {profile?.plan === "pro" ? "Genelo Pro" : "Free"}
+                Plan: <span className="font-medium text-foreground">{isPro ? "Genelo Pro" : "Free"}</span>
               </div>
             </div>
-            {profile?.plan !== "pro" && (
-              <Link
-                to="/pricing"
-                className="inline-flex items-center gap-1 rounded-full bg-foreground px-3 py-1.5 text-xs font-medium text-background"
-              >
-                <Crown className="h-3.5 w-3.5" /> Upgrade
-              </Link>
-            )}
+          </div>
+          {!isPro && (
+            <Link
+              to="/pricing"
+              className="mt-4 inline-flex items-center gap-1 rounded-full bg-foreground px-3 py-1.5 text-xs font-medium text-background"
+            >
+              <Crown className="h-3.5 w-3.5" /> Upgrade · TSh 1,200/mo
+            </Link>
+          )}
+        </Section>
+
+        {/* AI Model */}
+        <Section title="AI Model" icon={<Sparkles className="h-4 w-4" />}>
+          <p className="mb-3 text-xs text-muted-foreground">
+            Choose which Genelo model powers your conversations. Pro models need an upgrade.
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {MODES.map((m) => {
+              const active = mode === m.id;
+              const locked = m.pro && !isPro;
+              return (
+                <button
+                  key={m.id}
+                  onClick={() => pickMode(m.id, locked)}
+                  className={`rounded-xl border px-3 py-3 text-left transition-all ${
+                    active
+                      ? "border-foreground bg-foreground text-background"
+                      : "border-border bg-card hover:border-foreground/30"
+                  } ${locked ? "opacity-60" : ""}`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold">{m.name}</span>
+                    <span className={`ml-auto text-[10px] uppercase ${active ? "text-background/70" : "text-muted-foreground"}`}>
+                      {m.tag}
+                    </span>
+                    {locked && <Lock className="h-3 w-3" />}
+                  </div>
+                  <div className={`mt-1 text-[11px] ${active ? "text-background/70" : "text-muted-foreground"}`}>
+                    {m.description}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </Section>
 
+        {/* Appearance */}
         <Section title="Appearance" icon={theme === "dark" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}>
           <div className="flex items-center justify-between">
             <div>

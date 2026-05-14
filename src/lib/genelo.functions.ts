@@ -6,13 +6,17 @@ import { MODES } from "./modes";
 
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
-const SYSTEM = `You are Genelo AI, a professional assistant built for:
-- Writing front-end code in any programming language (HTML, CSS, JavaScript, TypeScript, React, Vue, Svelte, Python, etc.)
-- Research, teaching and clear explanations
-- Answering questions and doing accurate calculations
-- Helping users design and ship apps
+const SYSTEM = `You are Genelo AI — a warm, friendly and professional assistant built in Tanzania, similar in style to ChatGPT. You help with front-end code (HTML, CSS, JS, TS, React, Vue, Svelte, Python and more), research, teaching, accurate calculations, image ideas and shipping real apps.
 
-Always reply in the user's language. Use markdown. For code, always use fenced code blocks with the language tag. Be concise and professional.`;
+How to answer EVERY message:
+1. Greet the user by name on the very first reply of a conversation (e.g. "Welcome back, {name} 👋"). After that, just reply naturally.
+2. Reply in the user's language. Always use clean markdown — headings, bold, bullet lists. For code, ALWAYS use fenced code blocks with the language tag.
+3. Give a clear, complete answer to what they asked. Then go a bit deeper: share a short "Inner research" note with extra context, comparisons, or how it works under the hood.
+4. Add a short "💡 My advice" line with a practical tip or best practice.
+5. End with a "References" section listing 2–4 trustworthy sources (MDN, official docs, well-known articles) as plain links — do not invent URLs you are not sure exist; prefer well-known canonical ones (developer.mozilla.org, react.dev, nodejs.org, tailwindcss.com, supabase.com, etc.).
+6. Finish with one short follow-up question to keep the conversation going (e.g. "Would you like me to also add dark mode to this?").
+
+Remember the full conversation context and continue naturally from previous turns. Never wrap your whole response in a code block. Be concise but generous — quality over filler.`;
 
 const ChatInput = z.object({
   modeId: z.string().min(1).max(40),
@@ -33,20 +37,23 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const mode = MODES.find((m) => m.id === data.modeId) ?? MODES[0];
 
-    // Gate Pro modes
-    if (mode.pro) {
-      const { data: profile } = await context.supabase
-        .from("profiles")
-        .select("plan")
-        .eq("id", context.userId)
-        .maybeSingle();
-      if (!profile || profile.plan !== "pro") {
-        return {
-          ok: false as const,
-          error: "This mode is Pro-only. Upgrade to Genelo Pro for TSh 1,200/month.",
-        };
-      }
+    const { data: profile } = await context.supabase
+      .from("profiles")
+      .select("plan, display_name, email")
+      .eq("id", context.userId)
+      .maybeSingle();
+
+    if (mode.pro && (!profile || profile.plan !== "pro")) {
+      return {
+        ok: false as const,
+        error: "This mode is Pro-only. Upgrade to Genelo Pro for TSh 1,200/month.",
+      };
     }
+
+    const name =
+      (profile?.display_name && profile.display_name.trim()) ||
+      (profile?.email ? profile.email.split("@")[0] : "friend");
+    const systemPrompt = SYSTEM.replace(/\{name\}/g, name);
 
     const key = process.env.LOVABLE_API_KEY;
     if (!key) return { ok: false as const, error: "AI not configured." };
@@ -59,7 +66,7 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
       },
       body: JSON.stringify({
         model: mode.model,
-        messages: [{ role: "system", content: SYSTEM }, ...data.messages],
+        messages: [{ role: "system", content: systemPrompt }, ...data.messages],
       }),
     });
 
@@ -182,7 +189,7 @@ export const getProfile = createServerFn({ method: "POST" })
     const [{ data: profile }, { data: usage }] = await Promise.all([
       context.supabase
         .from("profiles")
-        .select("plan, email")
+        .select("plan, email, display_name, avatar_url")
         .eq("id", context.userId)
         .maybeSingle(),
       context.supabase
@@ -192,4 +199,25 @@ export const getProfile = createServerFn({ method: "POST" })
         .eq("day", today),
     ]);
     return { profile, usage: usage ?? [] };
+  });
+
+const UpdateProfileInput = z.object({
+  display_name: z.string().min(1).max(60).optional(),
+  avatar_url: z.string().url().max(1000).nullable().optional(),
+});
+
+export const updateProfile = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => UpdateProfileInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const patch: { display_name?: string; avatar_url?: string | null } = {};
+    if (data.display_name !== undefined) patch.display_name = data.display_name;
+    if (data.avatar_url !== undefined) patch.avatar_url = data.avatar_url;
+    if (Object.keys(patch).length === 0) return { ok: true as const };
+    const { error } = await context.supabase
+      .from("profiles")
+      .update(patch)
+      .eq("id", context.userId);
+    if (error) return { ok: false as const, error: error.message };
+    return { ok: true as const };
   });
