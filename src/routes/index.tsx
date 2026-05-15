@@ -64,6 +64,11 @@ function HomePage() {
   const [chatId, setChatId] = useState<string | undefined>(undefined);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [chats, setChats] = useState<{ id: string; title: string; updated_at: string }[]>([]);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [listening, setListening] = useState(false);
+  const [speakReplies, setSpeakReplies] = useState(false);
+  const recognitionRef = useRef<any>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Saved AI mode (persisted in localStorage; chosen in Settings)
