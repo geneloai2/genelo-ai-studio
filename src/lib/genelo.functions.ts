@@ -29,7 +29,21 @@ const ChatInput = z.object({
     .array(
       z.object({
         role: z.enum(["user", "assistant"]),
-        content: z.string().min(1).max(20000),
+        content: z.union([
+          z.string().min(1).max(40000),
+          z
+            .array(
+              z.union([
+                z.object({ type: z.literal("text"), text: z.string().min(1).max(40000) }),
+                z.object({
+                  type: z.literal("image_url"),
+                  image_url: z.object({ url: z.string().min(1).max(2_000_000) }),
+                }),
+              ]),
+            )
+            .min(1)
+            .max(8),
+        ]),
       }),
     )
     .min(1)
