@@ -19,6 +19,8 @@ import {
   X,
   Trash2,
   MessageSquare,
+  Check,
+  Copy,
 } from "lucide-react";
 import { toast, Toaster } from "sonner";
 
@@ -420,18 +422,36 @@ function HomePage() {
 
 function Bubble({ msg }: { msg: Msg }) {
   const isUser = msg.role === "user";
+  const [copied, setCopied] = useState(false);
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(msg.content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* ignore */
+    }
+  }
   if (isUser) {
     return (
-      <div className="flex justify-end">
-        <div className="max-w-[85%] rounded-2xl bg-foreground px-4 py-3 text-background">
-          <p className="whitespace-pre-wrap text-sm">{msg.content}</p>
+      <div className="group flex justify-end">
+        <div className="relative max-w-[85%] rounded-2xl bg-foreground px-4 py-3 text-background">
+          <p className="whitespace-pre-wrap pr-6 text-sm">{msg.content}</p>
+          <button
+            onClick={copy}
+            className="absolute -left-9 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-muted-foreground opacity-0 transition-opacity hover:bg-muted group-hover:opacity-100"
+            aria-label="Copy your message"
+            title="Copy"
+          >
+            {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+          </button>
         </div>
       </div>
     );
   }
   // Assistant: full-width, no box, ChatGPT-style
   return (
-    <div className="flex gap-3">
+    <div className="group flex gap-3">
       <div className="mt-1 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-foreground text-background">
         <Sparkles className="h-3.5 w-3.5" />
       </div>
@@ -444,6 +464,15 @@ function Bubble({ msg }: { msg: Msg }) {
             className="mt-3 max-h-96 rounded-lg border border-border"
           />
         )}
+        <div className="mt-2 flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+          <button
+            onClick={copy}
+            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+            {copied ? "Copied" : "Copy response"}
+          </button>
+        </div>
       </div>
     </div>
   );
