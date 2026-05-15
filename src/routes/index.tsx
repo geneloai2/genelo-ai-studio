@@ -664,7 +664,7 @@ function Bubble({ msg }: { msg: Msg }) {
   );
 }
 
-function Welcome({ name }: { name: string }) {
+function Welcome({ name, onPick }: { name: string; onPick: (text: string) => void }) {
   const examples = [
     "Build a responsive React pricing card with Tailwind",
     "Explain useEffect cleanup with an example",
@@ -685,12 +685,13 @@ function Welcome({ name }: { name: string }) {
       </p>
       <div className="mt-8 grid gap-2 text-left sm:grid-cols-2">
         {examples.map((e) => (
-          <div
+          <button
             key={e}
-            className="rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground"
+            onClick={() => onPick(e)}
+            className="rounded-xl border border-border bg-card px-4 py-3 text-left text-sm text-muted-foreground transition-colors hover:border-foreground/40 hover:bg-accent hover:text-foreground"
           >
             {e}
-          </div>
+          </button>
         ))}
       </div>
     </div>
