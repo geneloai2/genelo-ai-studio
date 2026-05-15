@@ -469,7 +469,7 @@ function HomePage() {
       {/* Messages */}
       <main ref={scrollRef} className="mx-auto w-full max-w-3xl flex-1 overflow-y-auto px-4 py-6">
         {messages.length === 0 ? (
-          <Welcome name={displayName} />
+          <Welcome name={displayName} onPick={(t) => send(t)} />
         ) : (
           <div className="space-y-8">
             {messages.map((m, i) => (
