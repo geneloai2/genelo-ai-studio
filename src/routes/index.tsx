@@ -21,6 +21,12 @@ import {
   MessageSquare,
   Check,
   Copy,
+  Mic,
+  MicOff,
+  Paperclip,
+  Volume2,
+  VolumeX,
+  FileText,
 } from "lucide-react";
 import { toast, Toaster } from "sonner";
 
