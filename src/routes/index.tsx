@@ -19,6 +19,8 @@ import {
   X,
   Trash2,
   MessageSquare,
+  Check,
+  Copy,
 } from "lucide-react";
 import { toast, Toaster } from "sonner";
 
