@@ -21,6 +21,12 @@ import {
   MessageSquare,
   Check,
   Copy,
+  Mic,
+  MicOff,
+  Paperclip,
+  Volume2,
+  VolumeX,
+  FileText,
 } from "lucide-react";
 import { toast, Toaster } from "sonner";
 
@@ -41,7 +47,8 @@ export const Route = createFileRoute("/")({
   component: HomePage,
 });
 
-type Msg = { role: "user" | "assistant"; content: string; image?: string };
+type Attachment = { name: string; mime: string; dataUrl: string; kind: "image" | "file"; text?: string };
+type Msg = { role: "user" | "assistant"; content: string; image?: string; attachments?: Attachment[] };
 type Profile = { plan: string; display_name?: string | null; avatar_url?: string | null; email?: string | null };
 
 function HomePage() {
@@ -57,6 +64,11 @@ function HomePage() {
   const [chatId, setChatId] = useState<string | undefined>(undefined);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [chats, setChats] = useState<{ id: string; title: string; updated_at: string }[]>([]);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [listening, setListening] = useState(false);
+  const [speakReplies, setSpeakReplies] = useState(false);
+  const recognitionRef = useRef<any>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Saved AI mode (persisted in localStorage; chosen in Settings)
@@ -121,13 +133,94 @@ function HomePage() {
     (profile?.display_name && profile.display_name.trim()) ||
     (profile?.email ? profile.email.split("@")[0] : user?.email?.split("@")[0] ?? "friend");
 
-  async function send() {
-    const text = input.trim();
-    if (!text || busy) return;
-    const userMsg: Msg = { role: "user", content: text };
+  function speak(text: string) {
+    if (!speakReplies || typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    try {
+      const plain = text.replace(/```[\s\S]*?```/g, " code block ").replace(/[#*_`>-]/g, "");
+      const u = new SpeechSynthesisUtterance(plain.slice(0, 800));
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(u);
+    } catch {/* ignore */}
+  }
+
+  function toggleMic() {
+    if (typeof window === "undefined") return;
+    const SR: any = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) {
+      toast.error("Voice input not supported in this browser. Try Chrome.");
+      return;
+    }
+    if (listening) {
+      recognitionRef.current?.stop();
+      setListening(false);
+      return;
+    }
+    const r = new SR();
+    r.continuous = false;
+    r.interimResults = true;
+    r.lang = navigator.language || "en-US";
+    r.onresult = (ev: any) => {
+      let txt = "";
+      for (let i = ev.resultIndex; i < ev.results.length; i++) txt += ev.results[i][0].transcript;
+      setInput((prev) => (prev ? prev + " " : "") + txt);
+    };
+    r.onend = () => setListening(false);
+    r.onerror = () => setListening(false);
+    recognitionRef.current = r;
+    setListening(true);
+    r.start();
+  }
+
+  function readFileAsDataURL(f: File): Promise<string> {
+    return new Promise((res, rej) => {
+      const fr = new FileReader();
+      fr.onload = () => res(String(fr.result));
+      fr.onerror = () => rej(fr.error);
+      fr.readAsDataURL(f);
+    });
+  }
+  function readFileAsText(f: File): Promise<string> {
+    return new Promise((res, rej) => {
+      const fr = new FileReader();
+      fr.onload = () => res(String(fr.result || ""));
+      fr.onerror = () => rej(fr.error);
+      fr.readAsText(f);
+    });
+  }
+
+  async function onPickFiles(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    const next: Attachment[] = [];
+    for (const f of Array.from(files).slice(0, 4)) {
+      if (f.size > 8 * 1024 * 1024) {
+        toast.error(`${f.name} is larger than 8MB`);
+        continue;
+      }
+      try {
+        const isImage = f.type.startsWith("image/");
+        const dataUrl = await readFileAsDataURL(f);
+        let text: string | undefined;
+        if (!isImage && (f.type.startsWith("text/") || /\.(md|csv|json|js|ts|tsx|jsx|html|css|py)$/i.test(f.name))) {
+          text = (await readFileAsText(f)).slice(0, 20000);
+        }
+        next.push({ name: f.name, mime: f.type || "application/octet-stream", dataUrl, kind: isImage ? "image" : "file", text });
+      } catch {
+        toast.error(`Could not read ${f.name}`);
+      }
+    }
+    setAttachments((a) => [...a, ...next].slice(0, 4));
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  async function send(overrideText?: string) {
+    const text = (overrideText ?? input).trim();
+    if ((!text && attachments.length === 0) || busy) return;
+    const atts = attachments;
+    const userMsg: Msg = { role: "user", content: text || "(see attachment)", attachments: atts.length ? atts : undefined };
     const baseMessages = [...messages, userMsg];
     setMessages(baseMessages);
     setInput("");
+    setAttachments([]);
     setBusy(true);
 
     let finalMessages = baseMessages;
@@ -145,23 +238,44 @@ function HomePage() {
         }
         setMessages(finalMessages);
       } else {
-        const history = baseMessages.map((x) => ({ role: x.role, content: x.content }));
-        const r = await chatFn({ data: { modeId: mode, messages: history } });
+        const history = baseMessages.map((x) => {
+          if (x.attachments && x.attachments.length) {
+            const parts: any[] = [];
+            const fileNotes = x.attachments
+              .filter((a) => a.kind === "file")
+              .map((a) => `\n\n📎 Attached file: ${a.name}${a.text ? `\n\n\`\`\`\n${a.text}\n\`\`\`` : ""}`)
+              .join("");
+            parts.push({ type: "text", text: (x.content || "") + fileNotes });
+            for (const a of x.attachments) {
+              if (a.kind === "image") parts.push({ type: "image_url", image_url: { url: a.dataUrl } });
+            }
+            return { role: x.role, content: parts };
+          }
+          return { role: x.role, content: x.content };
+        });
+        const r = await chatFn({ data: { modeId: mode, messages: history as any } });
         if (!r.ok) {
           toast.error(r.error);
           finalMessages = [...baseMessages, { role: "assistant", content: `⚠️ ${r.error}` }];
         } else {
           finalMessages = [...baseMessages, { role: "assistant", content: r.content }];
+          speak(r.content);
         }
         setMessages(finalMessages);
       }
 
       try {
+        // Strip large dataUrls before saving to keep payload small
+        const toSave = finalMessages.map((m) => ({
+          role: m.role,
+          content: m.content,
+          ...(m.image ? { image: m.image } : {}),
+        }));
         const r = await saveFn({
           data: {
             id: chatId,
-            title: chatId ? "Chat" : text.slice(0, 60) || "New chat",
-            messages: finalMessages as any,
+            title: chatId ? "Chat" : (text || atts[0]?.name || "New chat").slice(0, 60),
+            messages: toSave as any,
           },
         });
         if (!chatId) setChatId(r.id);
@@ -355,7 +469,7 @@ function HomePage() {
       {/* Messages */}
       <main ref={scrollRef} className="mx-auto w-full max-w-3xl flex-1 overflow-y-auto px-4 py-6">
         {messages.length === 0 ? (
-          <Welcome name={displayName} />
+          <Welcome name={displayName} onPick={(t) => send(t)} />
         ) : (
           <div className="space-y-8">
             {messages.map((m, i) => (
@@ -373,7 +487,44 @@ function HomePage() {
       {/* Composer */}
       <div className="sticky bottom-0 border-t border-border bg-background">
         <div className="mx-auto max-w-3xl px-4 py-3">
+          {attachments.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-2">
+              {attachments.map((a, i) => (
+                <div key={i} className="flex items-center gap-2 rounded-lg border border-border bg-card px-2 py-1 text-xs">
+                  {a.kind === "image" ? (
+                    <img src={a.dataUrl} alt={a.name} className="h-8 w-8 rounded object-cover" />
+                  ) : (
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                  )}
+                  <span className="max-w-[160px] truncate">{a.name}</span>
+                  <button
+                    onClick={() => setAttachments((arr) => arr.filter((_, j) => j !== i))}
+                    className="rounded p-0.5 text-muted-foreground hover:bg-muted"
+                    aria-label="Remove attachment"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="flex items-end gap-2 rounded-2xl border border-border bg-card p-2 shadow-sm focus-within:border-foreground/40">
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*,.pdf,.txt,.md,.csv,.json,.js,.ts,.tsx,.jsx,.html,.css,.py"
+              className="hidden"
+              onChange={(e) => onPickFiles(e.target.files)}
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex h-9 w-9 items-center justify-center rounded-xl bg-muted text-muted-foreground hover:bg-accent"
+              title="Attach files"
+              aria-label="Attach files"
+            >
+              <Paperclip className="h-4 w-4" />
+            </button>
             <button
               onClick={() => setImgMode((v) => !v)}
               className={`flex h-9 items-center gap-1 rounded-xl px-3 text-xs font-medium transition-colors ${
@@ -399,13 +550,35 @@ function HomePage() {
               placeholder={
                 imgMode
                   ? "Describe an image to generate…"
-                  : "Ask Genelo anything — code, research, advice…"
+                  : listening
+                    ? "Listening…"
+                    : "Ask Genelo anything — code, research, advice…"
               }
               className="max-h-40 flex-1 resize-none bg-transparent px-2 py-2 text-sm outline-none placeholder:text-muted-foreground"
             />
             <button
-              onClick={send}
-              disabled={busy || !input.trim()}
+              onClick={() => setSpeakReplies((v) => !v)}
+              className={`flex h-9 w-9 items-center justify-center rounded-xl transition-colors ${
+                speakReplies ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:bg-accent"
+              }`}
+              title={speakReplies ? "Voice replies on" : "Voice replies off"}
+              aria-label="Toggle voice replies"
+            >
+              {speakReplies ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+            </button>
+            <button
+              onClick={toggleMic}
+              className={`flex h-9 w-9 items-center justify-center rounded-xl transition-colors ${
+                listening ? "bg-red-500 text-white animate-pulse" : "bg-muted text-muted-foreground hover:bg-accent"
+              }`}
+              title={listening ? "Stop voice input" : "Start voice input"}
+              aria-label="Voice input"
+            >
+              {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            </button>
+            <button
+              onClick={() => send()}
+              disabled={busy || (!input.trim() && attachments.length === 0)}
               className="flex h-9 w-9 items-center justify-center rounded-xl bg-foreground text-background transition-opacity disabled:opacity-40"
             >
               <Send className="h-4 w-4" />
@@ -436,6 +609,19 @@ function Bubble({ msg }: { msg: Msg }) {
     return (
       <div className="group flex justify-end">
         <div className="relative max-w-[85%] rounded-2xl bg-foreground px-4 py-3 text-background">
+          {msg.attachments && msg.attachments.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-2">
+              {msg.attachments.map((a, i) =>
+                a.kind === "image" ? (
+                  <img key={i} src={a.dataUrl} alt={a.name} className="h-20 w-20 rounded-md object-cover" />
+                ) : (
+                  <div key={i} className="flex items-center gap-1 rounded-md bg-background/10 px-2 py-1 text-xs">
+                    <FileText className="h-3 w-3" /> {a.name}
+                  </div>
+                ),
+              )}
+            </div>
+          )}
           <p className="whitespace-pre-wrap pr-6 text-sm">{msg.content}</p>
           <button
             onClick={copy}
@@ -478,7 +664,7 @@ function Bubble({ msg }: { msg: Msg }) {
   );
 }
 
-function Welcome({ name }: { name: string }) {
+function Welcome({ name, onPick }: { name: string; onPick: (text: string) => void }) {
   const examples = [
     "Build a responsive React pricing card with Tailwind",
     "Explain useEffect cleanup with an example",
@@ -499,12 +685,13 @@ function Welcome({ name }: { name: string }) {
       </p>
       <div className="mt-8 grid gap-2 text-left sm:grid-cols-2">
         {examples.map((e) => (
-          <div
+          <button
             key={e}
-            className="rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground"
+            onClick={() => onPick(e)}
+            className="rounded-xl border border-border bg-card px-4 py-3 text-left text-sm text-muted-foreground transition-colors hover:border-foreground/40 hover:bg-accent hover:text-foreground"
           >
             {e}
-          </div>
+          </button>
         ))}
       </div>
     </div>
