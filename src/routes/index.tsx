@@ -487,7 +487,44 @@ function HomePage() {
       {/* Composer */}
       <div className="sticky bottom-0 border-t border-border bg-background">
         <div className="mx-auto max-w-3xl px-4 py-3">
+          {attachments.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-2">
+              {attachments.map((a, i) => (
+                <div key={i} className="flex items-center gap-2 rounded-lg border border-border bg-card px-2 py-1 text-xs">
+                  {a.kind === "image" ? (
+                    <img src={a.dataUrl} alt={a.name} className="h-8 w-8 rounded object-cover" />
+                  ) : (
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                  )}
+                  <span className="max-w-[160px] truncate">{a.name}</span>
+                  <button
+                    onClick={() => setAttachments((arr) => arr.filter((_, j) => j !== i))}
+                    className="rounded p-0.5 text-muted-foreground hover:bg-muted"
+                    aria-label="Remove attachment"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="flex items-end gap-2 rounded-2xl border border-border bg-card p-2 shadow-sm focus-within:border-foreground/40">
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*,.pdf,.txt,.md,.csv,.json,.js,.ts,.tsx,.jsx,.html,.css,.py"
+              className="hidden"
+              onChange={(e) => onPickFiles(e.target.files)}
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex h-9 w-9 items-center justify-center rounded-xl bg-muted text-muted-foreground hover:bg-accent"
+              title="Attach files"
+              aria-label="Attach files"
+            >
+              <Paperclip className="h-4 w-4" />
+            </button>
             <button
               onClick={() => setImgMode((v) => !v)}
               className={`flex h-9 items-center gap-1 rounded-xl px-3 text-xs font-medium transition-colors ${
@@ -513,13 +550,35 @@ function HomePage() {
               placeholder={
                 imgMode
                   ? "Describe an image to generate…"
-                  : "Ask Genelo anything — code, research, advice…"
+                  : listening
+                    ? "Listening…"
+                    : "Ask Genelo anything — code, research, advice…"
               }
               className="max-h-40 flex-1 resize-none bg-transparent px-2 py-2 text-sm outline-none placeholder:text-muted-foreground"
             />
             <button
-              onClick={send}
-              disabled={busy || !input.trim()}
+              onClick={() => setSpeakReplies((v) => !v)}
+              className={`flex h-9 w-9 items-center justify-center rounded-xl transition-colors ${
+                speakReplies ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:bg-accent"
+              }`}
+              title={speakReplies ? "Voice replies on" : "Voice replies off"}
+              aria-label="Toggle voice replies"
+            >
+              {speakReplies ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+            </button>
+            <button
+              onClick={toggleMic}
+              className={`flex h-9 w-9 items-center justify-center rounded-xl transition-colors ${
+                listening ? "bg-red-500 text-white animate-pulse" : "bg-muted text-muted-foreground hover:bg-accent"
+              }`}
+              title={listening ? "Stop voice input" : "Start voice input"}
+              aria-label="Voice input"
+            >
+              {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            </button>
+            <button
+              onClick={() => send()}
+              disabled={busy || (!input.trim() && attachments.length === 0)}
               className="flex h-9 w-9 items-center justify-center rounded-xl bg-foreground text-background transition-opacity disabled:opacity-40"
             >
               <Send className="h-4 w-4" />
