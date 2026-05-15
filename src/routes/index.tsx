@@ -133,13 +133,94 @@ function HomePage() {
     (profile?.display_name && profile.display_name.trim()) ||
     (profile?.email ? profile.email.split("@")[0] : user?.email?.split("@")[0] ?? "friend");
 
-  async function send() {
-    const text = input.trim();
-    if (!text || busy) return;
-    const userMsg: Msg = { role: "user", content: text };
+  function speak(text: string) {
+    if (!speakReplies || typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    try {
+      const plain = text.replace(/```[\s\S]*?```/g, " code block ").replace(/[#*_`>-]/g, "");
+      const u = new SpeechSynthesisUtterance(plain.slice(0, 800));
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(u);
+    } catch {/* ignore */}
+  }
+
+  function toggleMic() {
+    if (typeof window === "undefined") return;
+    const SR: any = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) {
+      toast.error("Voice input not supported in this browser. Try Chrome.");
+      return;
+    }
+    if (listening) {
+      recognitionRef.current?.stop();
+      setListening(false);
+      return;
+    }
+    const r = new SR();
+    r.continuous = false;
+    r.interimResults = true;
+    r.lang = navigator.language || "en-US";
+    r.onresult = (ev: any) => {
+      let txt = "";
+      for (let i = ev.resultIndex; i < ev.results.length; i++) txt += ev.results[i][0].transcript;
+      setInput((prev) => (prev ? prev + " " : "") + txt);
+    };
+    r.onend = () => setListening(false);
+    r.onerror = () => setListening(false);
+    recognitionRef.current = r;
+    setListening(true);
+    r.start();
+  }
+
+  function readFileAsDataURL(f: File): Promise<string> {
+    return new Promise((res, rej) => {
+      const fr = new FileReader();
+      fr.onload = () => res(String(fr.result));
+      fr.onerror = () => rej(fr.error);
+      fr.readAsDataURL(f);
+    });
+  }
+  function readFileAsText(f: File): Promise<string> {
+    return new Promise((res, rej) => {
+      const fr = new FileReader();
+      fr.onload = () => res(String(fr.result || ""));
+      fr.onerror = () => rej(fr.error);
+      fr.readAsText(f);
+    });
+  }
+
+  async function onPickFiles(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    const next: Attachment[] = [];
+    for (const f of Array.from(files).slice(0, 4)) {
+      if (f.size > 8 * 1024 * 1024) {
+        toast.error(`${f.name} is larger than 8MB`);
+        continue;
+      }
+      try {
+        const isImage = f.type.startsWith("image/");
+        const dataUrl = await readFileAsDataURL(f);
+        let text: string | undefined;
+        if (!isImage && (f.type.startsWith("text/") || /\.(md|csv|json|js|ts|tsx|jsx|html|css|py)$/i.test(f.name))) {
+          text = (await readFileAsText(f)).slice(0, 20000);
+        }
+        next.push({ name: f.name, mime: f.type || "application/octet-stream", dataUrl, kind: isImage ? "image" : "file", text });
+      } catch {
+        toast.error(`Could not read ${f.name}`);
+      }
+    }
+    setAttachments((a) => [...a, ...next].slice(0, 4));
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  async function send(overrideText?: string) {
+    const text = (overrideText ?? input).trim();
+    if ((!text && attachments.length === 0) || busy) return;
+    const atts = attachments;
+    const userMsg: Msg = { role: "user", content: text || "(see attachment)", attachments: atts.length ? atts : undefined };
     const baseMessages = [...messages, userMsg];
     setMessages(baseMessages);
     setInput("");
+    setAttachments([]);
     setBusy(true);
 
     let finalMessages = baseMessages;
@@ -157,23 +238,44 @@ function HomePage() {
         }
         setMessages(finalMessages);
       } else {
-        const history = baseMessages.map((x) => ({ role: x.role, content: x.content }));
-        const r = await chatFn({ data: { modeId: mode, messages: history } });
+        const history = baseMessages.map((x) => {
+          if (x.attachments && x.attachments.length) {
+            const parts: any[] = [];
+            const fileNotes = x.attachments
+              .filter((a) => a.kind === "file")
+              .map((a) => `\n\n📎 Attached file: ${a.name}${a.text ? `\n\n\`\`\`\n${a.text}\n\`\`\`` : ""}`)
+              .join("");
+            parts.push({ type: "text", text: (x.content || "") + fileNotes });
+            for (const a of x.attachments) {
+              if (a.kind === "image") parts.push({ type: "image_url", image_url: { url: a.dataUrl } });
+            }
+            return { role: x.role, content: parts };
+          }
+          return { role: x.role, content: x.content };
+        });
+        const r = await chatFn({ data: { modeId: mode, messages: history as any } });
         if (!r.ok) {
           toast.error(r.error);
           finalMessages = [...baseMessages, { role: "assistant", content: `⚠️ ${r.error}` }];
         } else {
           finalMessages = [...baseMessages, { role: "assistant", content: r.content }];
+          speak(r.content);
         }
         setMessages(finalMessages);
       }
 
       try {
+        // Strip large dataUrls before saving to keep payload small
+        const toSave = finalMessages.map((m) => ({
+          role: m.role,
+          content: m.content,
+          ...(m.image ? { image: m.image } : {}),
+        }));
         const r = await saveFn({
           data: {
             id: chatId,
-            title: chatId ? "Chat" : text.slice(0, 60) || "New chat",
-            messages: finalMessages as any,
+            title: chatId ? "Chat" : (text || atts[0]?.name || "New chat").slice(0, 60),
+            messages: toSave as any,
           },
         });
         if (!chatId) setChatId(r.id);
