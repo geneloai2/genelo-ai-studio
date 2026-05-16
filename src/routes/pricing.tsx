@@ -73,11 +73,16 @@ function PricingPage() {
             <Feat>Gn Pro — top-tier reasoning</Feat>
             <Feat>Unlimited image generation</Feat>
             <Feat>Priority responses</Feat>
-            <button className="mt-5 w-full rounded-xl bg-foreground py-2.5 text-sm font-medium text-background">
-              Upgrade to Pro
+            <button
+              onClick={upgrade}
+              disabled={loading}
+              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-foreground py-2.5 text-sm font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-60"
+            >
+              {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+              {loading ? "Starting checkout…" : "Upgrade to Pro"}
             </button>
             <p className="mt-2 text-center text-[11px] text-muted-foreground">
-              Payment checkout coming soon.
+              Secure payment via Flutterwave — card, mobile money &amp; bank.
             </p>
           </Card>
         </div>
