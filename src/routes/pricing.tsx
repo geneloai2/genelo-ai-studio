@@ -1,6 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Sparkles, Check, Crown } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { useState } from "react";
+import { Sparkles, Check, Crown, Loader2 } from "lucide-react";
 import { MODES } from "@/lib/modes";
+import { startProCheckout } from "@/lib/flutterwave.functions";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/pricing")({
   head: () => ({
@@ -13,6 +17,22 @@ export const Route = createFileRoute("/pricing")({
 });
 
 function PricingPage() {
+  const startCheckout = useServerFn(startProCheckout);
+  const [loading, setLoading] = useState(false);
+
+  async function upgrade() {
+    setLoading(true);
+    try {
+      const res = await startCheckout();
+      if (res.ok) window.location.href = res.url;
+      else toast.error(res.error ?? "Could not start checkout.");
+    } catch {
+      toast.error("Checkout failed. Please sign in and try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border">
