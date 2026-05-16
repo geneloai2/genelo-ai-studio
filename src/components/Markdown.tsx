@@ -187,6 +187,20 @@ function parseBlocks(content: string): Block[] {
       continue;
     }
 
+    // Standalone image: ![alt](url)
+    const imgMatch = line.match(/^!\[([^\]]*)\]\(([^)]+)\)\s*$/);
+    if (imgMatch) {
+      flushBuffer();
+      const alt = escape(imgMatch[1]);
+      const src = imgMatch[2];
+      blocks.push({
+        kind: "html",
+        html: `<figure class="my-3"><img src="${src}" alt="${alt}" loading="lazy" class="max-h-80 w-auto rounded-xl border border-genelo/30 shadow-md object-cover" />${alt ? `<figcaption class="mt-1.5 text-xs italic text-muted-foreground">${alt}</figcaption>` : ""}</figure>`,
+      });
+      i++;
+      continue;
+    }
+
     // Bullet list
     if (/^[-*]\s+/.test(line)) {
       const items: string[] = [];
