@@ -1,6 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Sparkles, Check, Crown } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { useState } from "react";
+import { Sparkles, Check, Crown, Loader2 } from "lucide-react";
 import { MODES } from "@/lib/modes";
+import { startProCheckout } from "@/lib/flutterwave.functions";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/pricing")({
   head: () => ({
@@ -13,6 +17,22 @@ export const Route = createFileRoute("/pricing")({
 });
 
 function PricingPage() {
+  const startCheckout = useServerFn(startProCheckout);
+  const [loading, setLoading] = useState(false);
+
+  async function upgrade() {
+    setLoading(true);
+    try {
+      const res = await startCheckout();
+      if (res.ok) window.location.href = res.url;
+      else toast.error(res.error ?? "Could not start checkout.");
+    } catch {
+      toast.error("Checkout failed. Please sign in and try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border">
@@ -53,11 +73,16 @@ function PricingPage() {
             <Feat>Gn Pro — top-tier reasoning</Feat>
             <Feat>Unlimited image generation</Feat>
             <Feat>Priority responses</Feat>
-            <button className="mt-5 w-full rounded-xl bg-foreground py-2.5 text-sm font-medium text-background">
-              Upgrade to Pro
+            <button
+              onClick={upgrade}
+              disabled={loading}
+              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-foreground py-2.5 text-sm font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-60"
+            >
+              {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+              {loading ? "Starting checkout…" : "Upgrade to Pro"}
             </button>
             <p className="mt-2 text-center text-[11px] text-muted-foreground">
-              Payment checkout coming soon.
+              Secure payment via Flutterwave — card, mobile money &amp; bank.
             </p>
           </Card>
         </div>
