@@ -69,6 +69,7 @@ function HomePage() {
   const [speakReplies, setSpeakReplies] = useState(false);
   const recognitionRef = useRef<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Saved AI mode (persisted in localStorage; chosen in Settings)
@@ -220,6 +221,7 @@ function HomePage() {
     const baseMessages = [...messages, userMsg];
     setMessages(baseMessages);
     setInput("");
+    if (textareaRef.current) textareaRef.current.style.height = "auto";
     setAttachments([]);
     setBusy(true);
 
@@ -538,8 +540,14 @@ function HomePage() {
               {imgMode ? "Image" : "Chat"}
             </button>
             <textarea
+              ref={textareaRef}
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(e) => {
+                setInput(e.target.value);
+                const el = e.currentTarget;
+                el.style.height = "auto";
+                el.style.height = Math.min(el.scrollHeight, 240) + "px";
+              }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
@@ -554,7 +562,7 @@ function HomePage() {
                     ? "Listening…"
                     : "Ask Genelo anything — code, research, advice…"
               }
-              className="max-h-40 flex-1 resize-none bg-transparent px-2 py-2 text-sm outline-none placeholder:text-muted-foreground"
+              className="min-h-[40px] max-h-60 flex-1 resize-none overflow-y-auto bg-transparent px-2 py-2 text-sm leading-6 outline-none placeholder:text-muted-foreground"
             />
             <button
               onClick={() => setSpeakReplies((v) => !v)}
