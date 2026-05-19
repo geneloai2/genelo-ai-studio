@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { Sparkles, Check, Crown, Loader2 } from "lucide-react";
+import { Sparkles, Check, Crown, Loader2, Smartphone, CreditCard } from "lucide-react";
 import { MODES } from "@/lib/modes";
 import { startProCheckout } from "@/lib/flutterwave.functions";
+import { startZenoPayCheckout } from "@/lib/zenopay.functions";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/pricing")({
@@ -18,7 +19,11 @@ export const Route = createFileRoute("/pricing")({
 
 function PricingPage() {
   const startCheckout = useServerFn(startProCheckout);
+  const startZeno = useServerFn(startZenoPayCheckout);
   const [loading, setLoading] = useState(false);
+  const [zenoLoading, setZenoLoading] = useState(false);
+  const [phone, setPhone] = useState("");
+  const [method, setMethod] = useState<"zeno" | "flutter">("zeno");
 
   async function upgrade() {
     setLoading(true);
@@ -32,6 +37,28 @@ function PricingPage() {
       setLoading(false);
     }
   }
+
+  async function payWithZeno() {
+    const digits = phone.replace(/\D/g, "");
+    if (digits.length < 9) {
+      toast.error("Enter a valid Tanzania phone, e.g. 0744123456");
+      return;
+    }
+    setZenoLoading(true);
+    try {
+      const res = await startZeno({ data: { phone: digits } });
+      if (res.ok) {
+        toast.success(res.message, { duration: 8000 });
+      } else {
+        toast.error(res.error ?? "ZenoPay failed.");
+      }
+    } catch {
+      toast.error("ZenoPay request failed. Please try again.");
+    } finally {
+      setZenoLoading(false);
+    }
+  }
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -73,18 +100,65 @@ function PricingPage() {
             <Feat>Gn Pro — top-tier reasoning</Feat>
             <Feat>Unlimited image generation</Feat>
             <Feat>Priority responses</Feat>
-            <button
-              onClick={upgrade}
-              disabled={loading}
-              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-foreground py-2.5 text-sm font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-60"
-            >
-              {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-              {loading ? "Starting checkout…" : "Upgrade to Pro"}
-            </button>
-            <p className="mt-2 text-center text-[11px] text-muted-foreground">
-              Secure payment via Flutterwave — card, mobile money &amp; bank.
-            </p>
+
+            <div className="mt-5 flex gap-2 rounded-xl bg-muted p-1 text-xs font-medium">
+              <button
+                onClick={() => setMethod("zeno")}
+                className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 transition-colors ${
+                  method === "zeno" ? "bg-background shadow-sm" : "text-muted-foreground"
+                }`}
+              >
+                <Smartphone className="h-3.5 w-3.5" /> Mobile Money
+              </button>
+              <button
+                onClick={() => setMethod("flutter")}
+                className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 transition-colors ${
+                  method === "flutter" ? "bg-background shadow-sm" : "text-muted-foreground"
+                }`}
+              >
+                <CreditCard className="h-3.5 w-3.5" /> Card / Bank
+              </button>
+            </div>
+
+            {method === "zeno" ? (
+              <div className="mt-3 space-y-2">
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  placeholder="07XX XXX XXX (M-Pesa, Tigo, Airtel, Halotel)"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm outline-none focus:border-foreground/40"
+                />
+                <button
+                  onClick={payWithZeno}
+                  disabled={zenoLoading}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-foreground py-2.5 text-sm font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-60"
+                >
+                  {zenoLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {zenoLoading ? "Sending USSD…" : "Pay TSh 1,200 with Mobile Money"}
+                </button>
+                <p className="text-center text-[11px] text-muted-foreground">
+                  You'll get a PIN prompt on your phone via ZenoPay.
+                </p>
+              </div>
+            ) : (
+              <>
+                <button
+                  onClick={upgrade}
+                  disabled={loading}
+                  className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-foreground py-2.5 text-sm font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-60"
+                >
+                  {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {loading ? "Starting checkout…" : "Pay with Card / Bank"}
+                </button>
+                <p className="mt-2 text-center text-[11px] text-muted-foreground">
+                  Secure card &amp; bank payment via Flutterwave.
+                </p>
+              </>
+            )}
           </Card>
+
         </div>
 
         <div className="mt-16">
