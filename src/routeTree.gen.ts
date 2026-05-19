@@ -14,6 +14,7 @@ import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiPublicZenopayWebhookRouteImport } from './routes/api/public/zenopay-webhook'
 import { Route as ApiPublicFlutterwaveWebhookRouteImport } from './routes/api/public/flutterwave-webhook'
 
 const SettingsRoute = SettingsRouteImport.update({
@@ -41,6 +42,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicZenopayWebhookRoute = ApiPublicZenopayWebhookRouteImport.update({
+  id: '/api/public/zenopay-webhook',
+  path: '/api/public/zenopay-webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicFlutterwaveWebhookRoute =
   ApiPublicFlutterwaveWebhookRouteImport.update({
     id: '/api/public/flutterwave-webhook',
@@ -55,6 +61,7 @@ export interface FileRoutesByFullPath {
   '/pricing': typeof PricingRoute
   '/settings': typeof SettingsRoute
   '/api/public/flutterwave-webhook': typeof ApiPublicFlutterwaveWebhookRoute
+  '/api/public/zenopay-webhook': typeof ApiPublicZenopayWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -63,6 +70,7 @@ export interface FileRoutesByTo {
   '/pricing': typeof PricingRoute
   '/settings': typeof SettingsRoute
   '/api/public/flutterwave-webhook': typeof ApiPublicFlutterwaveWebhookRoute
+  '/api/public/zenopay-webhook': typeof ApiPublicZenopayWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -72,6 +80,7 @@ export interface FileRoutesById {
   '/pricing': typeof PricingRoute
   '/settings': typeof SettingsRoute
   '/api/public/flutterwave-webhook': typeof ApiPublicFlutterwaveWebhookRoute
+  '/api/public/zenopay-webhook': typeof ApiPublicZenopayWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -82,6 +91,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/settings'
     | '/api/public/flutterwave-webhook'
+    | '/api/public/zenopay-webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -90,6 +100,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/settings'
     | '/api/public/flutterwave-webhook'
+    | '/api/public/zenopay-webhook'
   id:
     | '__root__'
     | '/'
@@ -98,6 +109,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/settings'
     | '/api/public/flutterwave-webhook'
+    | '/api/public/zenopay-webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -107,6 +119,7 @@ export interface RootRouteChildren {
   PricingRoute: typeof PricingRoute
   SettingsRoute: typeof SettingsRoute
   ApiPublicFlutterwaveWebhookRoute: typeof ApiPublicFlutterwaveWebhookRoute
+  ApiPublicZenopayWebhookRoute: typeof ApiPublicZenopayWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -146,6 +159,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/zenopay-webhook': {
+      id: '/api/public/zenopay-webhook'
+      path: '/api/public/zenopay-webhook'
+      fullPath: '/api/public/zenopay-webhook'
+      preLoaderRoute: typeof ApiPublicZenopayWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/flutterwave-webhook': {
       id: '/api/public/flutterwave-webhook'
       path: '/api/public/flutterwave-webhook'
@@ -163,7 +183,18 @@ const rootRouteChildren: RootRouteChildren = {
   PricingRoute: PricingRoute,
   SettingsRoute: SettingsRoute,
   ApiPublicFlutterwaveWebhookRoute: ApiPublicFlutterwaveWebhookRoute,
+  ApiPublicZenopayWebhookRoute: ApiPublicZenopayWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
