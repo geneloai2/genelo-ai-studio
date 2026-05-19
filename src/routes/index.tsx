@@ -540,6 +540,7 @@ function HomePage() {
               {imgMode ? "Image" : "Chat"}
             </button>
             <textarea
+              ref={textareaRef}
               value={input}
               onChange={(e) => {
                 setInput(e.target.value);
