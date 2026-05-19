@@ -221,6 +221,7 @@ function HomePage() {
     const baseMessages = [...messages, userMsg];
     setMessages(baseMessages);
     setInput("");
+    if (textareaRef.current) textareaRef.current.style.height = "auto";
     setAttachments([]);
     setBusy(true);
 
