@@ -69,6 +69,7 @@ function HomePage() {
   const [speakReplies, setSpeakReplies] = useState(false);
   const recognitionRef = useRef<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Saved AI mode (persisted in localStorage; chosen in Settings)
