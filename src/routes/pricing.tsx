@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { Sparkles, Check, Crown, Loader2 } from "lucide-react";
+import { Sparkles, Check, Crown, Loader2, Smartphone, CreditCard } from "lucide-react";
 import { MODES } from "@/lib/modes";
 import { startProCheckout } from "@/lib/flutterwave.functions";
+import { startZenoPayCheckout } from "@/lib/zenopay.functions";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/pricing")({
@@ -18,7 +19,11 @@ export const Route = createFileRoute("/pricing")({
 
 function PricingPage() {
   const startCheckout = useServerFn(startProCheckout);
+  const startZeno = useServerFn(startZenoPayCheckout);
   const [loading, setLoading] = useState(false);
+  const [zenoLoading, setZenoLoading] = useState(false);
+  const [phone, setPhone] = useState("");
+  const [method, setMethod] = useState<"zeno" | "flutter">("zeno");
 
   async function upgrade() {
     setLoading(true);
@@ -32,6 +37,28 @@ function PricingPage() {
       setLoading(false);
     }
   }
+
+  async function payWithZeno() {
+    const digits = phone.replace(/\D/g, "");
+    if (digits.length < 9) {
+      toast.error("Enter a valid Tanzania phone, e.g. 0744123456");
+      return;
+    }
+    setZenoLoading(true);
+    try {
+      const res = await startZeno({ data: { phone: digits } });
+      if (res.ok) {
+        toast.success(res.message, { duration: 8000 });
+      } else {
+        toast.error(res.error ?? "ZenoPay failed.");
+      }
+    } catch {
+      toast.error("ZenoPay request failed. Please try again.");
+    } finally {
+      setZenoLoading(false);
+    }
+  }
+
 
   return (
     <div className="min-h-screen bg-background">
