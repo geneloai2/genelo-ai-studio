@@ -17,7 +17,7 @@ export const MODES: Mode[] = [
     tag: "Normal",
     description: "Balanced everyday assistant. 3 free images per day.",
     imageLimit: 3,
-    model: "google/gemini-2.5-flash-lite",
+    model: "google/gemini-3.1-flash-lite-preview",
     pro: false,
   },
   {
@@ -26,7 +26,7 @@ export const MODES: Mode[] = [
     tag: "Super",
     description: "Faster and smarter. 10 free images per day.",
     imageLimit: 10,
-    model: "google/gemini-2.5-flash",
+    model: "google/gemini-3-flash-preview",
     pro: false,
   },
   {
@@ -35,7 +35,7 @@ export const MODES: Mode[] = [
     tag: "Pro",
     description: "Super speed, full features, no daily limits.",
     imageLimit: 9999,
-    model: "google/gemini-3-flash-preview",
+    model: "google/gemini-3.1-flash-lite-preview",
     pro: true,
   },
   {
