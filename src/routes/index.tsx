@@ -128,7 +128,7 @@ function HomePage() {
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 9e9, behavior: "smooth" });
-  }, [messages, busy]);
+  }, [messages, busy, input, attachments]);
 
   const displayName =
     (profile?.display_name && profile.display_name.trim()) ||
