@@ -17,7 +17,7 @@ export const MODES: Mode[] = [
     tag: "Normal",
     description: "Balanced everyday assistant. 3 free images per day.",
     imageLimit: 3,
-    model: "google/gemini-2.5-flash-lite",
+    model: "google/gemini-3.1-flash-lite-preview",
     pro: false,
   },
   {
