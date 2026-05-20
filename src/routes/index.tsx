@@ -510,7 +510,7 @@ function HomePage() {
               ))}
             </div>
           )}
-          <div className="flex items-end gap-2 rounded-2xl border border-border bg-card p-2 shadow-sm focus-within:border-foreground/40">
+          <div className="flex flex-col gap-2 rounded-2xl border border-border bg-card p-2 shadow-sm focus-within:border-foreground/40">
             <input
               ref={fileInputRef}
               type="file"
@@ -519,26 +519,6 @@ function HomePage() {
               className="hidden"
               onChange={(e) => onPickFiles(e.target.files)}
             />
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="flex h-9 w-9 items-center justify-center rounded-xl bg-muted text-muted-foreground hover:bg-accent"
-              title="Attach files"
-              aria-label="Attach files"
-            >
-              <Paperclip className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => setImgMode((v) => !v)}
-              className={`flex h-9 items-center gap-1 rounded-xl px-3 text-xs font-medium transition-colors ${
-                imgMode
-                  ? "bg-foreground text-background"
-                  : "bg-muted text-muted-foreground hover:bg-accent"
-              }`}
-              title="Toggle image generation"
-            >
-              <ImageIcon className="h-4 w-4" />
-              {imgMode ? "Image" : "Chat"}
-            </button>
             <textarea
               ref={textareaRef}
               value={input}
@@ -548,6 +528,9 @@ function HomePage() {
                 el.style.height = "auto";
                 el.style.height = Math.min(el.scrollHeight, 240) + "px";
               }}
+              onFocus={() =>
+                scrollRef.current?.scrollTo({ top: 9e9, behavior: "smooth" })
+              }
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
@@ -562,35 +545,59 @@ function HomePage() {
                     ? "Listening…"
                     : "Ask Genelo anything — code, research, advice…"
               }
-              className="min-h-[40px] max-h-60 flex-1 resize-none overflow-y-auto bg-transparent px-2 py-2 text-sm leading-6 outline-none placeholder:text-muted-foreground"
+              className="min-h-[44px] max-h-60 w-full resize-none overflow-y-auto bg-transparent px-2 py-2 text-sm leading-6 outline-none placeholder:text-muted-foreground"
             />
-            <button
-              onClick={() => setSpeakReplies((v) => !v)}
-              className={`flex h-9 w-9 items-center justify-center rounded-xl transition-colors ${
-                speakReplies ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:bg-accent"
-              }`}
-              title={speakReplies ? "Voice replies on" : "Voice replies off"}
-              aria-label="Toggle voice replies"
-            >
-              {speakReplies ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-            </button>
-            <button
-              onClick={toggleMic}
-              className={`flex h-9 w-9 items-center justify-center rounded-xl transition-colors ${
-                listening ? "bg-red-500 text-white animate-pulse" : "bg-muted text-muted-foreground hover:bg-accent"
-              }`}
-              title={listening ? "Stop voice input" : "Start voice input"}
-              aria-label="Voice input"
-            >
-              {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-            </button>
-            <button
-              onClick={() => send()}
-              disabled={busy || (!input.trim() && attachments.length === 0)}
-              className="flex h-9 w-9 items-center justify-center rounded-xl bg-foreground text-background transition-opacity disabled:opacity-40"
-            >
-              <Send className="h-4 w-4" />
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted"
+                title="Attach files"
+                aria-label="Attach files"
+              >
+                <Paperclip className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setImgMode((v) => !v)}
+                className={`flex h-8 items-center gap-1 rounded-lg px-2.5 text-xs font-medium transition-colors ${
+                  imgMode
+                    ? "bg-foreground text-background"
+                    : "text-muted-foreground hover:bg-muted"
+                }`}
+                title="Toggle image generation"
+              >
+                <ImageIcon className="h-4 w-4" />
+                {imgMode ? "Image" : "Chat"}
+              </button>
+              <div className="flex-1" />
+              <button
+                onClick={() => setSpeakReplies((v) => !v)}
+                className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
+                  speakReplies ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted"
+                }`}
+                title={speakReplies ? "Voice replies on" : "Voice replies off"}
+                aria-label="Toggle voice replies"
+              >
+                {speakReplies ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+              </button>
+              <button
+                onClick={toggleMic}
+                className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
+                  listening ? "bg-red-500 text-white animate-pulse" : "text-muted-foreground hover:bg-muted"
+                }`}
+                title={listening ? "Stop voice input" : "Start voice input"}
+                aria-label="Voice input"
+              >
+                {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+              </button>
+              <button
+                onClick={() => send()}
+                disabled={busy || (!input.trim() && attachments.length === 0)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground text-background transition-opacity disabled:opacity-40"
+                aria-label="Send"
+              >
+                <Send className="h-4 w-4" />
+              </button>
+            </div>
           </div>
           <p className="mt-2 text-center text-[11px] text-muted-foreground">
             Genelo can make mistakes. Verify important information.
