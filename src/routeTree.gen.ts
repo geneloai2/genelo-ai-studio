@@ -9,14 +9,24 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as DocsRouteImport } from './routes/docs'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BlogIndexRouteImport } from './routes/blog.index'
+import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as ApiPublicZenopayWebhookRouteImport } from './routes/api/public/zenopay-webhook'
 import { Route as ApiPublicFlutterwaveWebhookRouteImport } from './routes/api/public/flutterwave-webhook'
 
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -32,14 +42,34 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DocsRoute = DocsRouteImport.update({
+  id: '/docs',
+  path: '/docs',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlogIndexRoute = BlogIndexRouteImport.update({
+  id: '/blog/',
+  path: '/blog/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlogSlugRoute = BlogSlugRouteImport.update({
+  id: '/blog/$slug',
+  path: '/blog/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicZenopayWebhookRoute = ApiPublicZenopayWebhookRouteImport.update({
@@ -56,29 +86,44 @@ const ApiPublicFlutterwaveWebhookRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/admin': typeof AdminRoute
+  '/docs': typeof DocsRoute
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
   '/settings': typeof SettingsRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/blog/$slug': typeof BlogSlugRoute
+  '/blog/': typeof BlogIndexRoute
   '/api/public/flutterwave-webhook': typeof ApiPublicFlutterwaveWebhookRoute
   '/api/public/zenopay-webhook': typeof ApiPublicZenopayWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/admin': typeof AdminRoute
+  '/docs': typeof DocsRoute
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
   '/settings': typeof SettingsRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/blog/$slug': typeof BlogSlugRoute
+  '/blog': typeof BlogIndexRoute
   '/api/public/flutterwave-webhook': typeof ApiPublicFlutterwaveWebhookRoute
   '/api/public/zenopay-webhook': typeof ApiPublicZenopayWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/admin': typeof AdminRoute
+  '/docs': typeof DocsRoute
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
   '/settings': typeof SettingsRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/blog/$slug': typeof BlogSlugRoute
+  '/blog/': typeof BlogIndexRoute
   '/api/public/flutterwave-webhook': typeof ApiPublicFlutterwaveWebhookRoute
   '/api/public/zenopay-webhook': typeof ApiPublicZenopayWebhookRoute
 }
@@ -86,44 +131,71 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/about'
     | '/admin'
+    | '/docs'
     | '/login'
     | '/pricing'
     | '/settings'
+    | '/sitemap.xml'
+    | '/blog/$slug'
+    | '/blog/'
     | '/api/public/flutterwave-webhook'
     | '/api/public/zenopay-webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/about'
     | '/admin'
+    | '/docs'
     | '/login'
     | '/pricing'
     | '/settings'
+    | '/sitemap.xml'
+    | '/blog/$slug'
+    | '/blog'
     | '/api/public/flutterwave-webhook'
     | '/api/public/zenopay-webhook'
   id:
     | '__root__'
     | '/'
+    | '/about'
     | '/admin'
+    | '/docs'
     | '/login'
     | '/pricing'
     | '/settings'
+    | '/sitemap.xml'
+    | '/blog/$slug'
+    | '/blog/'
     | '/api/public/flutterwave-webhook'
     | '/api/public/zenopay-webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AboutRoute: typeof AboutRoute
   AdminRoute: typeof AdminRoute
+  DocsRoute: typeof DocsRoute
   LoginRoute: typeof LoginRoute
   PricingRoute: typeof PricingRoute
   SettingsRoute: typeof SettingsRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  BlogSlugRoute: typeof BlogSlugRoute
+  BlogIndexRoute: typeof BlogIndexRoute
   ApiPublicFlutterwaveWebhookRoute: typeof ApiPublicFlutterwaveWebhookRoute
   ApiPublicZenopayWebhookRoute: typeof ApiPublicZenopayWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
@@ -145,6 +217,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/docs': {
+      id: '/docs'
+      path: '/docs'
+      fullPath: '/docs'
+      preLoaderRoute: typeof DocsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin': {
       id: '/admin'
       path: '/admin'
@@ -152,11 +231,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog/': {
+      id: '/blog/'
+      path: '/blog'
+      fullPath: '/blog/'
+      preLoaderRoute: typeof BlogIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog/$slug': {
+      id: '/blog/$slug'
+      path: '/blog/$slug'
+      fullPath: '/blog/$slug'
+      preLoaderRoute: typeof BlogSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/zenopay-webhook': {
@@ -178,23 +278,18 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AboutRoute: AboutRoute,
   AdminRoute: AdminRoute,
+  DocsRoute: DocsRoute,
   LoginRoute: LoginRoute,
   PricingRoute: PricingRoute,
   SettingsRoute: SettingsRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
+  BlogSlugRoute: BlogSlugRoute,
+  BlogIndexRoute: BlogIndexRoute,
   ApiPublicFlutterwaveWebhookRoute: ApiPublicFlutterwaveWebhookRoute,
   ApiPublicZenopayWebhookRoute: ApiPublicZenopayWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
