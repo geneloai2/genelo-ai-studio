@@ -66,6 +66,16 @@ function AboutPage() {
         </p>
 
         <h2 className="mt-10 text-2xl font-semibold">Who is Genelo Moses Mwazembe?</h2>
+        <div className="my-6 flex justify-center">
+          <img
+            src={FOUNDER_IMAGE}
+            alt="Genelo Moses Mwazembe — founder and owner of Genelo AI"
+            width={400}
+            height={400}
+            className="rounded-2xl border border-border object-cover shadow-sm"
+            loading="eager"
+          />
+        </div>
         <p>
           Genelo Moses Mwazembe is a young Tanzanian software developer and
           the founder, owner and lead engineer of Genelo AI. He was born and
