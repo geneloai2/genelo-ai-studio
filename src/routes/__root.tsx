@@ -91,6 +91,31 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: appCss,
       },
     ],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          name: "Genelo AI",
+          url: "https://geneloai.lovable.app",
+          logo: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/e9a8aca5-428f-4bab-a058-c911e0b5d150",
+          founder: {
+            "@type": "Person",
+            name: "Genelo Moses Mwazembe",
+            url: "https://geneloai.lovable.app/about",
+            image: "https://geneloai.lovable.app/founder-genelo.jpg",
+          },
+          contactPoint: {
+            "@type": "ContactPoint",
+            contactType: "customer support",
+            email: "support@geneloai.com",
+            availableLanguage: ["English", "Swahili"],
+          },
+          sameAs: [],
+        }),
+      },
+    ],
   }),
   shellComponent: RootShell,
   component: RootComponent,
