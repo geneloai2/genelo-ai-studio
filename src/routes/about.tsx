@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 
+const FOUNDER_IMAGE = "https://geneloai.lovable.app/founder-genelo.jpg";
+
 export const Route = createFileRoute("/about")({
   head: () => ({
     meta: [
@@ -7,7 +9,7 @@ export const Route = createFileRoute("/about")({
       {
         name: "description",
         content:
-          "Genelo AI is built by Genelo Moses Mwazembe, a young Tanzanian developer from Vwawa, Songwe. Learn the story, mission and people behind Genelo AI.",
+          "Genelo AI is built by Genelo Moses Mwazembe, a young Tanzanian developer from Vwawa, Songwe. Learn the story, mission, contact details and people behind Genelo AI.",
       },
       { name: "author", content: "Genelo Moses Mwazembe" },
       { property: "og:title", content: "About Genelo AI — Founded by Genelo Moses Mwazembe" },
@@ -18,6 +20,8 @@ export const Route = createFileRoute("/about")({
       },
       { property: "og:type", content: "profile" },
       { property: "og:url", content: "https://geneloai.lovable.app/about" },
+      { property: "og:image", content: FOUNDER_IMAGE },
+      { name: "twitter:image", content: FOUNDER_IMAGE },
     ],
     links: [{ rel: "canonical", href: "https://geneloai.lovable.app/about" }],
     scripts: [
@@ -31,6 +35,7 @@ export const Route = createFileRoute("/about")({
           jobTitle: "Founder & Developer",
           worksFor: { "@type": "Organization", name: "Genelo AI", url: "https://geneloai.lovable.app" },
           url: "https://geneloai.lovable.app/about",
+          image: FOUNDER_IMAGE,
           nationality: "Tanzanian",
           birthPlace: {
             "@type": "Place",
@@ -38,6 +43,7 @@ export const Route = createFileRoute("/about")({
           },
           description:
             "Genelo Moses Mwazembe is the founder and owner of Genelo AI, an AI platform for coding, research, image generation and answers.",
+          sameAs: [],
         }),
       },
     ],
