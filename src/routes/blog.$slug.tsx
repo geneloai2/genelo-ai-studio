@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 
 type Post = {
@@ -5,7 +6,7 @@ type Post = {
   title: string;
   date: string;
   description: string;
-  body: JSX.Element;
+  body: ReactNode;
 };
 
 const POSTS: Record<string, Post> = {
