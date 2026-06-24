@@ -15,6 +15,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as ApiPublicZenopayWebhookRouteImport } from './routes/api/public/zenopay-webhook'
 import { Route as ApiPublicFlutterwaveWebhookRouteImport } from './routes/api/public/flutterwave-webhook'
 
@@ -48,6 +49,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BlogIndexRoute = BlogIndexRouteImport.update({
+  id: '/blog/',
+  path: '/blog/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicZenopayWebhookRoute = ApiPublicZenopayWebhookRouteImport.update({
   id: '/api/public/zenopay-webhook',
   path: '/api/public/zenopay-webhook',
@@ -67,6 +73,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
   '/settings': typeof SettingsRoute
+  '/blog/': typeof BlogIndexRoute
   '/api/public/flutterwave-webhook': typeof ApiPublicFlutterwaveWebhookRoute
   '/api/public/zenopay-webhook': typeof ApiPublicZenopayWebhookRoute
 }
@@ -77,6 +84,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
   '/settings': typeof SettingsRoute
+  '/blog': typeof BlogIndexRoute
   '/api/public/flutterwave-webhook': typeof ApiPublicFlutterwaveWebhookRoute
   '/api/public/zenopay-webhook': typeof ApiPublicZenopayWebhookRoute
 }
@@ -88,6 +96,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
   '/settings': typeof SettingsRoute
+  '/blog/': typeof BlogIndexRoute
   '/api/public/flutterwave-webhook': typeof ApiPublicFlutterwaveWebhookRoute
   '/api/public/zenopay-webhook': typeof ApiPublicZenopayWebhookRoute
 }
@@ -100,6 +109,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/pricing'
     | '/settings'
+    | '/blog/'
     | '/api/public/flutterwave-webhook'
     | '/api/public/zenopay-webhook'
   fileRoutesByTo: FileRoutesByTo
@@ -110,6 +120,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/pricing'
     | '/settings'
+    | '/blog'
     | '/api/public/flutterwave-webhook'
     | '/api/public/zenopay-webhook'
   id:
@@ -120,6 +131,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/pricing'
     | '/settings'
+    | '/blog/'
     | '/api/public/flutterwave-webhook'
     | '/api/public/zenopay-webhook'
   fileRoutesById: FileRoutesById
@@ -131,6 +143,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   PricingRoute: typeof PricingRoute
   SettingsRoute: typeof SettingsRoute
+  BlogIndexRoute: typeof BlogIndexRoute
   ApiPublicFlutterwaveWebhookRoute: typeof ApiPublicFlutterwaveWebhookRoute
   ApiPublicZenopayWebhookRoute: typeof ApiPublicZenopayWebhookRoute
 }
@@ -179,6 +192,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/blog/': {
+      id: '/blog/'
+      path: '/blog'
+      fullPath: '/blog/'
+      preLoaderRoute: typeof BlogIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/zenopay-webhook': {
       id: '/api/public/zenopay-webhook'
       path: '/api/public/zenopay-webhook'
@@ -203,6 +223,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   PricingRoute: PricingRoute,
   SettingsRoute: SettingsRoute,
+  BlogIndexRoute: BlogIndexRoute,
   ApiPublicFlutterwaveWebhookRoute: ApiPublicFlutterwaveWebhookRoute,
   ApiPublicZenopayWebhookRoute: ApiPublicZenopayWebhookRoute,
 }
