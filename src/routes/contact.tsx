@@ -1,6 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 
 const CONTACT_EMAIL = "support@geneloai.com";
+const CONTACT_PHONE = "+255621673848";
+const SOCIAL = {
+  tiktok: "https://www.tiktok.com/@genelo_tz",
+  tiktokAlt: "https://www.tiktok.com/@softwareengineer010",
+  facebook: "https://www.facebook.com/genelo.tz",
+};
 const ADDRESS = {
   street: "Gym Road, Ichenjezya",
   city: "Vwawa",
