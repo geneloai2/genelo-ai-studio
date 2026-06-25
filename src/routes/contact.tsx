@@ -52,13 +52,16 @@ export const Route = createFileRoute("/contact")({
               url: "https://geneloai.lovable.app/about",
               image: "https://geneloai.lovable.app/founder-genelo.jpg",
             },
-            contactPoint: {
-              "@type": "ContactPoint",
-              contactType: "customer support",
-              email: CONTACT_EMAIL,
-              areaServed: "TZ",
-              availableLanguage: ["English", "Swahili"],
-            },
+            contactPoint: [
+              {
+                "@type": "ContactPoint",
+                contactType: "customer support",
+                email: CONTACT_EMAIL,
+                telephone: CONTACT_PHONE,
+                areaServed: "TZ",
+                availableLanguage: ["English", "Swahili"],
+              },
+            ],
             address: {
               "@type": "PostalAddress",
               streetAddress: ADDRESS.street,
@@ -66,6 +69,7 @@ export const Route = createFileRoute("/contact")({
               addressRegion: ADDRESS.region,
               addressCountry: ADDRESS.country,
             },
+            sameAs: [SOCIAL.tiktok, SOCIAL.tiktokAlt, SOCIAL.facebook],
           },
         }),
       },
