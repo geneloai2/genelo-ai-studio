@@ -106,13 +106,21 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
             url: "https://geneloai.lovable.app/about",
             image: "https://geneloai.lovable.app/founder-genelo.jpg",
           },
-          contactPoint: {
-            "@type": "ContactPoint",
-            contactType: "customer support",
-            email: "support@geneloai.com",
-            availableLanguage: ["English", "Swahili"],
-          },
-          sameAs: [],
+          contactPoint: [
+            {
+              "@type": "ContactPoint",
+              contactType: "customer support",
+              email: "support@geneloai.com",
+              telephone: "+255621673848",
+              areaServed: "TZ",
+              availableLanguage: ["English", "Swahili"],
+            },
+          ],
+          sameAs: [
+            "https://www.tiktok.com/@genelo_tz",
+            "https://www.tiktok.com/@softwareengineer010",
+            "https://www.facebook.com/genelo.tz",
+          ],
         }),
       },
     ],
