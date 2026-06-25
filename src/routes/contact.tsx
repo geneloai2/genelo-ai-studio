@@ -97,9 +97,11 @@ function ContactPage() {
           </a>
         </p>
 
-        <h2 className="mt-10 text-2xl font-semibold">Phone</h2>
-        <p className="text-muted-foreground">
-          A phone number will be added here soon. Please share the number you want listed.
+        <h2 className="mt-10 text-2xl font-semibold">Phone / WhatsApp</h2>
+        <p>
+          <a href={`tel:${CONTACT_PHONE}`} className="text-primary hover:underline">
+            {CONTACT_PHONE}
+          </a>
         </p>
 
         <h2 className="mt-10 text-2xl font-semibold">Address</h2>
@@ -108,6 +110,13 @@ function ContactPage() {
           {ADDRESS.city}, {ADDRESS.region}<br />
           {ADDRESS.country}
         </p>
+
+        <h2 className="mt-10 text-2xl font-semibold">Social</h2>
+        <ul>
+          <li>TikTok: <a href={SOCIAL.tiktok} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">@genelo_tz</a></li>
+          <li>TikTok (alt): <a href={SOCIAL.tiktokAlt} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">@softwareengineer010</a></li>
+          <li>Facebook: <a href={SOCIAL.facebook} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Genelo Tz</a></li>
+        </ul>
 
         <h2 className="mt-10 text-2xl font-semibold">Founder</h2>
         <p>
