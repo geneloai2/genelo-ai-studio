@@ -708,8 +708,8 @@ function Bubble({ msg }: { msg: Msg }) {
             onClick={copy}
             className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
           >
-            {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-            {copied ? "Copied" : "Copy response"}
+            {copied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+            <span className={copied ? "text-green-500" : ""}>{copied ? "Copied" : "Copy response"}</span>
           </button>
         </div>
       </div>
