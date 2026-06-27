@@ -127,8 +127,17 @@ function HomePage() {
   }, [user, search.chat, getChatFn]);
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: 9e9, behavior: "smooth" });
-  }, [messages, busy, input, attachments]);
+    const el = scrollRef.current;
+    if (!el) return;
+    const doScroll = () => el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    doScroll();
+    const r1 = requestAnimationFrame(doScroll);
+    const t = setTimeout(doScroll, 120);
+    return () => {
+      cancelAnimationFrame(r1);
+      clearTimeout(t);
+    };
+  }, [messages, busy]);
 
   const displayName =
     (profile?.display_name && profile.display_name.trim()) ||
