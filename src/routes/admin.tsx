@@ -276,8 +276,33 @@ function AdminPage() {
                   const isAdmin = u.roles.includes("admin");
                   return (
                     <tr key={u.id} className="border-t border-border">
-                      <td className="px-4 py-2 font-medium">{u.email ?? "—"}</td>
-                      <td className="px-4 py-2">
+                      <td className="px-4 py-2 font-medium">
+                        <div className="flex items-center gap-2.5">
+                          {u.avatar_url ? (
+                            <img
+                              src={u.avatar_url}
+                              alt={u.email ?? ""}
+                              referrerPolicy="no-referrer"
+                              className="h-8 w-8 rounded-full object-cover ring-1 ring-border"
+                              onError={(e) => {
+                                (e.currentTarget as HTMLImageElement).style.display = "none";
+                              }}
+                            />
+                          ) : (
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-[11px] font-semibold uppercase text-muted-foreground">
+                              {(u.display_name?.[0] ?? u.email?.[0] ?? "?")}
+                            </div>
+                          )}
+                          <div className="flex flex-col">
+                            <span className="text-sm leading-tight">{u.email ?? "—"}</span>
+                            {u.display_name && (
+                              <span className="text-[11px] text-muted-foreground leading-tight">
+                                {u.display_name}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </td>
                         <span
                           className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${
                             u.plan === "pro"
