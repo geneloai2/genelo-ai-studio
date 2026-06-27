@@ -635,6 +635,13 @@ function HomePage() {
           </p>
         </div>
       </div>
+
+      {liveOpen && (
+        <LiveTalk
+          mode={mode}
+          onClose={() => setLiveOpen(false)}
+        />
+      )}
     </div>
   );
 }
