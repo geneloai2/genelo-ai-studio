@@ -67,7 +67,7 @@ export const listUsers = createServerFn({ method: "POST" })
 
     let query = supabaseAdmin
       .from("profiles")
-      .select("id, email, plan, created_at")
+      .select("id, email, plan, created_at, avatar_url, display_name")
       .order("created_at", { ascending: false })
       .limit(200);
     if (data.q) query = query.ilike("email", `%${data.q}%`);
