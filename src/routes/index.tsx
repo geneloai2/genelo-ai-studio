@@ -542,6 +542,18 @@ function HomePage() {
               onFocus={() =>
                 scrollRef.current?.scrollTo({ top: 9e9, behavior: "smooth" })
               }
+              onPaste={(e) => {
+                const txt = e.clipboardData.getData("text");
+                if (txt && txt.length > 1500) {
+                  e.preventDefault();
+                  const name = `pasted-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-")}.txt`;
+                  const dataUrl = "data:text/plain;base64," + btoa(unescape(encodeURIComponent(txt)));
+                  setAttachments((a) =>
+                    [...a, { name, mime: "text/plain", dataUrl, kind: "file" as const, text: txt.slice(0, 20000) }].slice(0, 4),
+                  );
+                  toast.success("Large paste saved as a .txt attachment");
+                }
+              }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
