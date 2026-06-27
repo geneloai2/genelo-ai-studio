@@ -613,6 +613,14 @@ function HomePage() {
                 {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
               </button>
               <button
+                onClick={() => setLiveOpen(true)}
+                className="flex h-8 items-center gap-1 rounded-lg bg-green-600 px-2.5 text-xs font-medium text-white hover:bg-green-700"
+                title="Live voice chat"
+                aria-label="Live voice chat"
+              >
+                <Radio className="h-3.5 w-3.5" /> Live
+              </button>
+              <button
                 onClick={() => send()}
                 disabled={busy || (!input.trim() && attachments.length === 0)}
                 className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground text-background transition-opacity disabled:opacity-40"
