@@ -27,6 +27,7 @@ import {
   Volume2,
   VolumeX,
   FileText,
+  Radio,
 } from "lucide-react";
 import { toast, Toaster } from "sonner";
 
@@ -67,6 +68,7 @@ function HomePage() {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [listening, setListening] = useState(false);
   const [speakReplies, setSpeakReplies] = useState(false);
+  const [liveOpen, setLiveOpen] = useState(false);
   const recognitionRef = useRef<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -540,6 +542,18 @@ function HomePage() {
               onFocus={() =>
                 scrollRef.current?.scrollTo({ top: 9e9, behavior: "smooth" })
               }
+              onPaste={(e) => {
+                const txt = e.clipboardData.getData("text");
+                if (txt && txt.length > 1500) {
+                  e.preventDefault();
+                  const name = `pasted-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-")}.txt`;
+                  const dataUrl = "data:text/plain;base64," + btoa(unescape(encodeURIComponent(txt)));
+                  setAttachments((a) =>
+                    [...a, { name, mime: "text/plain", dataUrl, kind: "file" as const, text: txt.slice(0, 20000) }].slice(0, 4),
+                  );
+                  toast.success("Large paste saved as a .txt attachment");
+                }
+              }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
@@ -599,6 +613,14 @@ function HomePage() {
                 {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
               </button>
               <button
+                onClick={() => setLiveOpen(true)}
+                className="flex h-8 items-center gap-1 rounded-lg bg-green-600 px-2.5 text-xs font-medium text-white hover:bg-green-700"
+                title="Live voice chat"
+                aria-label="Live voice chat"
+              >
+                <Radio className="h-3.5 w-3.5" /> Live
+              </button>
+              <button
                 onClick={() => send()}
                 disabled={busy || (!input.trim() && attachments.length === 0)}
                 className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground text-background transition-opacity disabled:opacity-40"
@@ -613,6 +635,13 @@ function HomePage() {
           </p>
         </div>
       </div>
+
+      {liveOpen && (
+        <LiveTalk
+          mode={mode}
+          onClose={() => setLiveOpen(false)}
+        />
+      )}
     </div>
   );
 }
@@ -653,7 +682,7 @@ function Bubble({ msg }: { msg: Msg }) {
             aria-label="Copy your message"
             title="Copy"
           >
-            {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+            {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
           </button>
         </div>
       </div>
@@ -679,8 +708,8 @@ function Bubble({ msg }: { msg: Msg }) {
             onClick={copy}
             className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
           >
-            {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-            {copied ? "Copied" : "Copy response"}
+            {copied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+            <span className={copied ? "text-green-500" : ""}>{copied ? "Copied" : "Copy response"}</span>
           </button>
         </div>
       </div>
@@ -718,6 +747,146 @@ function Welcome({ name, onPick }: { name: string; onPick: (text: string) => voi
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+function LiveTalk({ mode, onClose }: { mode: ModeId; onClose: () => void }) {
+  const chatFn = useServerFn(chatWithGenelo);
+  const [state, setState] = useState<"idle" | "listening" | "thinking" | "speaking">("idle");
+  const [transcript, setTranscript] = useState("");
+  const [reply, setReply] = useState("");
+  const historyRef = useRef<{ role: "user" | "assistant"; content: string }[]>([]);
+  const recRef = useRef<any>(null);
+  const stoppedRef = useRef(false);
+
+  function speak(text: string, onEnd: () => void) {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      onEnd();
+      return;
+    }
+    const plain = text.replace(/```[\s\S]*?```/g, " code block ").replace(/[#*_`>-]/g, "");
+    const u = new SpeechSynthesisUtterance(plain.slice(0, 1200));
+    u.rate = 1.05;
+    u.onend = onEnd;
+    u.onerror = onEnd;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(u);
+  }
+
+  function listenOnce(): Promise<string> {
+    return new Promise((resolve) => {
+      const SR: any = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (!SR) {
+        toast.error("Voice not supported in this browser. Try Chrome.");
+        resolve("");
+        return;
+      }
+      const r = new SR();
+      r.continuous = false;
+      r.interimResults = true;
+      r.lang = navigator.language || "en-US";
+      let finalText = "";
+      r.onresult = (ev: any) => {
+        let interim = "";
+        for (let i = ev.resultIndex; i < ev.results.length; i++) {
+          const res = ev.results[i];
+          if (res.isFinal) finalText += res[0].transcript;
+          else interim += res[0].transcript;
+        }
+        setTranscript(finalText + interim);
+      };
+      r.onend = () => resolve(finalText.trim());
+      r.onerror = () => resolve(finalText.trim());
+      recRef.current = r;
+      setState("listening");
+      setTranscript("");
+      r.start();
+    });
+  }
+
+  async function loop() {
+    while (!stoppedRef.current) {
+      const userText = await listenOnce();
+      if (stoppedRef.current) break;
+      if (!userText) {
+        await new Promise((r) => setTimeout(r, 300));
+        continue;
+      }
+      historyRef.current.push({ role: "user", content: userText });
+      setState("thinking");
+      setReply("");
+      try {
+        const r = await chatFn({
+          data: {
+            modeId: mode,
+            messages: historyRef.current.map((m) => ({ role: m.role, content: m.content })) as any,
+          },
+        });
+        if (!r.ok) throw new Error(r.error);
+        const text = r.content;
+        historyRef.current.push({ role: "assistant", content: text });
+        setReply(text);
+        setState("speaking");
+        await new Promise<void>((res) => speak(text, () => res()));
+      } catch (e: any) {
+        toast.error(e?.message || "AI error");
+      }
+    }
+    setState("idle");
+  }
+
+  useEffect(() => {
+    stoppedRef.current = false;
+    loop();
+    return () => {
+      stoppedRef.current = true;
+      try { recRef.current?.stop(); } catch { /* ignore */ }
+      if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function end() {
+    stoppedRef.current = true;
+    try { recRef.current?.stop(); } catch { /* ignore */ }
+    if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
+    onClose();
+  }
+
+  const label =
+    state === "listening" ? "Listening…" :
+    state === "thinking" ? "Thinking…" :
+    state === "speaking" ? "Speaking…" : "Connecting…";
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/95 backdrop-blur">
+      <button
+        onClick={end}
+        className="absolute right-4 top-4 rounded-full p-2 text-muted-foreground hover:bg-muted"
+        aria-label="End live chat"
+      >
+        <X className="h-5 w-5" />
+      </button>
+      <div
+        className={`flex h-32 w-32 items-center justify-center rounded-full ${
+          state === "listening" ? "bg-red-500 animate-pulse" :
+          state === "speaking" ? "bg-green-600 animate-pulse" :
+          state === "thinking" ? "bg-foreground" : "bg-muted"
+        }`}
+      >
+        <Radio className="h-12 w-12 text-white" />
+      </div>
+      <div className="mt-6 text-lg font-semibold">{label}</div>
+      <div className="mt-4 max-w-md px-6 text-center text-sm text-muted-foreground min-h-12">
+        {state === "speaking" ? reply.slice(0, 240) : transcript || "Say something to Genelo…"}
+      </div>
+      <button
+        onClick={end}
+        className="mt-8 rounded-full bg-red-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-red-600"
+      >
+        End call
+      </button>
     </div>
   );
 }
