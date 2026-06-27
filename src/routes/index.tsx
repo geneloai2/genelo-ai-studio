@@ -27,6 +27,7 @@ import {
   Volume2,
   VolumeX,
   FileText,
+  Radio,
 } from "lucide-react";
 import { toast, Toaster } from "sonner";
 
