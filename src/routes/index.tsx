@@ -750,3 +750,143 @@ function Welcome({ name, onPick }: { name: string; onPick: (text: string) => voi
     </div>
   );
 }
+
+function LiveTalk({ mode, onClose }: { mode: ModeId; onClose: () => void }) {
+  const chatFn = useServerFn(chatWithGenelo);
+  const [state, setState] = useState<"idle" | "listening" | "thinking" | "speaking">("idle");
+  const [transcript, setTranscript] = useState("");
+  const [reply, setReply] = useState("");
+  const historyRef = useRef<{ role: "user" | "assistant"; content: string }[]>([]);
+  const recRef = useRef<any>(null);
+  const stoppedRef = useRef(false);
+
+  function speak(text: string, onEnd: () => void) {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      onEnd();
+      return;
+    }
+    const plain = text.replace(/```[\s\S]*?```/g, " code block ").replace(/[#*_`>-]/g, "");
+    const u = new SpeechSynthesisUtterance(plain.slice(0, 1200));
+    u.rate = 1.05;
+    u.onend = onEnd;
+    u.onerror = onEnd;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(u);
+  }
+
+  function listenOnce(): Promise<string> {
+    return new Promise((resolve) => {
+      const SR: any = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (!SR) {
+        toast.error("Voice not supported in this browser. Try Chrome.");
+        resolve("");
+        return;
+      }
+      const r = new SR();
+      r.continuous = false;
+      r.interimResults = true;
+      r.lang = navigator.language || "en-US";
+      let finalText = "";
+      r.onresult = (ev: any) => {
+        let interim = "";
+        for (let i = ev.resultIndex; i < ev.results.length; i++) {
+          const res = ev.results[i];
+          if (res.isFinal) finalText += res[0].transcript;
+          else interim += res[0].transcript;
+        }
+        setTranscript(finalText + interim);
+      };
+      r.onend = () => resolve(finalText.trim());
+      r.onerror = () => resolve(finalText.trim());
+      recRef.current = r;
+      setState("listening");
+      setTranscript("");
+      r.start();
+    });
+  }
+
+  async function loop() {
+    while (!stoppedRef.current) {
+      const userText = await listenOnce();
+      if (stoppedRef.current) break;
+      if (!userText) {
+        await new Promise((r) => setTimeout(r, 300));
+        continue;
+      }
+      historyRef.current.push({ role: "user", content: userText });
+      setState("thinking");
+      setReply("");
+      try {
+        const r = await chatFn({
+          data: {
+            modeId: mode,
+            messages: historyRef.current.map((m) => ({ role: m.role, content: m.content })) as any,
+          },
+        });
+        if (!r.ok) throw new Error(r.error);
+        const text = r.content;
+        historyRef.current.push({ role: "assistant", content: text });
+        setReply(text);
+        setState("speaking");
+        await new Promise<void>((res) => speak(text, () => res()));
+      } catch (e: any) {
+        toast.error(e?.message || "AI error");
+      }
+    }
+    setState("idle");
+  }
+
+  useEffect(() => {
+    stoppedRef.current = false;
+    loop();
+    return () => {
+      stoppedRef.current = true;
+      try { recRef.current?.stop(); } catch { /* ignore */ }
+      if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function end() {
+    stoppedRef.current = true;
+    try { recRef.current?.stop(); } catch { /* ignore */ }
+    if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
+    onClose();
+  }
+
+  const label =
+    state === "listening" ? "Listening…" :
+    state === "thinking" ? "Thinking…" :
+    state === "speaking" ? "Speaking…" : "Connecting…";
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/95 backdrop-blur">
+      <button
+        onClick={end}
+        className="absolute right-4 top-4 rounded-full p-2 text-muted-foreground hover:bg-muted"
+        aria-label="End live chat"
+      >
+        <X className="h-5 w-5" />
+      </button>
+      <div
+        className={`flex h-32 w-32 items-center justify-center rounded-full ${
+          state === "listening" ? "bg-red-500 animate-pulse" :
+          state === "speaking" ? "bg-green-600 animate-pulse" :
+          state === "thinking" ? "bg-foreground" : "bg-muted"
+        }`}
+      >
+        <Radio className="h-12 w-12 text-white" />
+      </div>
+      <div className="mt-6 text-lg font-semibold">{label}</div>
+      <div className="mt-4 max-w-md px-6 text-center text-sm text-muted-foreground min-h-12">
+        {state === "speaking" ? reply.slice(0, 240) : transcript || "Say something to Genelo…"}
+      </div>
+      <button
+        onClick={end}
+        className="mt-8 rounded-full bg-red-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-red-600"
+      >
+        End call
+      </button>
+    </div>
+  );
+}
