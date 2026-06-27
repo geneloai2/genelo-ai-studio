@@ -682,7 +682,7 @@ function Bubble({ msg }: { msg: Msg }) {
             aria-label="Copy your message"
             title="Copy"
           >
-            {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+            {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
           </button>
         </div>
       </div>
