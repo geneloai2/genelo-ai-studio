@@ -128,16 +128,47 @@ function HomePage() {
       .catch(() => {});
   }, [user, search.chat, getChatFn]);
 
-  // Smart auto-scroll: pin to bottom unless user scrolls up to read.
+  // Smart auto-scroll: pin to bottom unless the user scrolls up to read.
   const pinnedRef = useRef(true);
+  const userScrollingRef = useRef(false);
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const NEAR = 120;
+    const NEAR = 140;
     const isNear = () => el.scrollHeight - el.scrollTop - el.clientHeight < NEAR;
-    const onScroll = () => { pinnedRef.current = isNear(); };
+
+    let releaseT: ReturnType<typeof setTimeout> | null = null;
+    const startUserGesture = () => {
+      userScrollingRef.current = true;
+      if (releaseT) clearTimeout(releaseT);
+    };
+    const endUserGesture = () => {
+      if (releaseT) clearTimeout(releaseT);
+      // Give momentum scroll time to settle, then re-evaluate pin state.
+      releaseT = setTimeout(() => {
+        userScrollingRef.current = false;
+        pinnedRef.current = isNear();
+      }, 180);
+    };
+    const onScroll = () => { if (!userScrollingRef.current) pinnedRef.current = isNear(); };
+
     el.addEventListener("scroll", onScroll, { passive: true });
-    return () => el.removeEventListener("scroll", onScroll);
+    el.addEventListener("touchstart", startUserGesture, { passive: true });
+    el.addEventListener("touchmove", startUserGesture, { passive: true });
+    el.addEventListener("touchend", endUserGesture, { passive: true });
+    el.addEventListener("touchcancel", endUserGesture, { passive: true });
+    el.addEventListener("wheel", startUserGesture, { passive: true });
+    el.addEventListener("wheel", endUserGesture, { passive: true });
+    return () => {
+      el.removeEventListener("scroll", onScroll);
+      el.removeEventListener("touchstart", startUserGesture);
+      el.removeEventListener("touchmove", startUserGesture);
+      el.removeEventListener("touchend", endUserGesture);
+      el.removeEventListener("touchcancel", endUserGesture);
+      el.removeEventListener("wheel", startUserGesture);
+      el.removeEventListener("wheel", endUserGesture);
+      if (releaseT) clearTimeout(releaseT);
+    };
   }, []);
 
   // Force-pin whenever the user sends a new message.
@@ -145,23 +176,35 @@ function HomePage() {
     if (messages[messages.length - 1]?.role === "user") pinnedRef.current = true;
   }, [messages]);
 
-  // Continuous scroll while pinned — new messages, streaming, async images, layout shifts.
+  // rAF-throttled auto-scroll — coalesces streaming/mutation/resize bursts
+  // into one paint, and never fights the user's finger.
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const scroll = (smooth = true) => {
-      if (!pinnedRef.current) return;
-      el.scrollTo({ top: el.scrollHeight, behavior: smooth ? "smooth" : "auto" });
+    let raf = 0;
+    let lastTop = -1;
+    const schedule = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        if (!pinnedRef.current || userScrollingRef.current) return;
+        const target = el.scrollHeight;
+        if (target === lastTop) return;
+        lastTop = target;
+        el.scrollTo({ top: target, behavior: "smooth" });
+      });
     };
-    scroll(false);
-    const raf = requestAnimationFrame(() => scroll(true));
-    const mo = new MutationObserver(() => scroll(true));
+    // Jump instantly on mount / message change, then keep pinned via rAF.
+    if (pinnedRef.current && !userScrollingRef.current) {
+      el.scrollTo({ top: el.scrollHeight, behavior: "auto" });
+    }
+    const mo = new MutationObserver(schedule);
     mo.observe(el, { childList: true, subtree: true, characterData: true });
-    const ro = new ResizeObserver(() => scroll(true));
+    const ro = new ResizeObserver(schedule);
     ro.observe(el);
     Array.from(el.children).forEach((c) => ro.observe(c as Element));
     return () => {
-      cancelAnimationFrame(raf);
+      if (raf) cancelAnimationFrame(raf);
       mo.disconnect();
       ro.disconnect();
     };
