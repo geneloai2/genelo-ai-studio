@@ -756,92 +756,165 @@ function LiveTalk({ mode, onClose }: { mode: ModeId; onClose: () => void }) {
   const [state, setState] = useState<"idle" | "listening" | "thinking" | "speaking">("idle");
   const [transcript, setTranscript] = useState("");
   const [reply, setReply] = useState("");
+  const [levels, setLevels] = useState<number[]>(() => Array(28).fill(0.15));
   const historyRef = useRef<{ role: "user" | "assistant"; content: string }[]>([]);
   const recRef = useRef<any>(null);
   const stoppedRef = useRef(false);
+  const speakingRef = useRef(false);
+  const streamRef = useRef<MediaStream | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const ctxRef = useRef<AudioContext | null>(null);
+  const pendingRef = useRef<string>("");
+  const bargedRef = useRef(false);
 
-  function speak(text: string, onEnd: () => void) {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-      onEnd();
-      return;
-    }
-    const plain = text.replace(/```[\s\S]*?```/g, " code block ").replace(/[#*_`>-]/g, "");
-    const u = new SpeechSynthesisUtterance(plain.slice(0, 1200));
-    u.rate = 1.05;
-    u.onend = onEnd;
-    u.onerror = onEnd;
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(u);
-  }
-
-  function listenOnce(): Promise<string> {
-    return new Promise((resolve) => {
-      const SR: any = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (!SR) {
-        toast.error("Voice not supported in this browser. Try Chrome.");
-        resolve("");
-        return;
+  // Mic waveform + barge-in detection
+  useEffect(() => {
+    let raf = 0;
+    (async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        streamRef.current = stream;
+        const AC: any = (window as any).AudioContext || (window as any).webkitAudioContext;
+        const ctx = new AC();
+        ctxRef.current = ctx;
+        const src = ctx.createMediaStreamSource(stream);
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 128;
+        src.connect(analyser);
+        analyserRef.current = analyser;
+        const data = new Uint8Array(analyser.frequencyBinCount);
+        const tick = () => {
+          analyser.getByteFrequencyData(data);
+          const bars = 28;
+          const step = Math.floor(data.length / bars);
+          const out: number[] = [];
+          let sum = 0;
+          for (let i = 0; i < bars; i++) {
+            let v = 0;
+            for (let j = 0; j < step; j++) v += data[i * step + j];
+            v = v / step / 255;
+            out.push(v);
+            sum += v;
+          }
+          setLevels(out);
+          const avg = sum / bars;
+          if (speakingRef.current && avg > 0.18 && !bargedRef.current) {
+            bargedRef.current = true;
+            window.speechSynthesis.cancel();
+          }
+          raf = requestAnimationFrame(tick);
+        };
+        tick();
+      } catch {
+        toast.error("Microphone permission needed for live chat.");
       }
-      const r = new SR();
-      r.continuous = false;
-      r.interimResults = true;
-      r.lang = navigator.language || "en-US";
-      let finalText = "";
-      r.onresult = (ev: any) => {
-        let interim = "";
-        for (let i = ev.resultIndex; i < ev.results.length; i++) {
-          const res = ev.results[i];
-          if (res.isFinal) finalText += res[0].transcript;
-          else interim += res[0].transcript;
-        }
-        setTranscript(finalText + interim);
-      };
-      r.onend = () => resolve(finalText.trim());
-      r.onerror = () => resolve(finalText.trim());
-      recRef.current = r;
-      setState("listening");
-      setTranscript("");
-      r.start();
+    })();
+    return () => {
+      cancelAnimationFrame(raf);
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      ctxRef.current?.close().catch(() => {});
+    };
+  }, []);
+
+  function speak(text: string): Promise<void> {
+    return new Promise((resolve) => {
+      if (typeof window === "undefined" || !("speechSynthesis" in window)) return resolve();
+      const plain = text.replace(/```[\s\S]*?```/g, " code block ").replace(/[#*_`>-]/g, "");
+      const u = new SpeechSynthesisUtterance(plain.slice(0, 1500));
+      u.rate = 1.05;
+      u.pitch = 1;
+      const voices = window.speechSynthesis.getVoices();
+      const pref = voices.find((v) => /en-US|en-GB/i.test(v.lang) && /female|samantha|zira|google/i.test(v.name))
+        || voices.find((v) => /en/i.test(v.lang));
+      if (pref) u.voice = pref;
+      u.onend = () => resolve();
+      u.onerror = () => resolve();
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(u);
     });
   }
 
-  async function loop() {
-    while (!stoppedRef.current) {
-      const userText = await listenOnce();
-      if (stoppedRef.current) break;
-      if (!userText) {
-        await new Promise((r) => setTimeout(r, 300));
-        continue;
-      }
-      historyRef.current.push({ role: "user", content: userText });
-      setState("thinking");
-      setReply("");
-      try {
-        const r = await chatFn({
-          data: {
-            modeId: mode,
-            messages: historyRef.current.map((m) => ({ role: m.role, content: m.content })) as any,
-          },
-        });
-        if (!r.ok) throw new Error(r.error);
-        const text = r.content;
-        historyRef.current.push({ role: "assistant", content: text });
-        setReply(text);
-        setState("speaking");
-        await new Promise<void>((res) => speak(text, () => res()));
-      } catch (e: any) {
-        toast.error(e?.message || "AI error");
-      }
+  async function askAndSpeak(userText: string) {
+    historyRef.current.push({ role: "user", content: userText });
+    setState("thinking");
+    setReply("");
+    try {
+      const r = await chatFn({
+        data: {
+          modeId: mode,
+          messages: historyRef.current.map((m) => ({ role: m.role, content: m.content })) as any,
+        },
+      });
+      if (!r.ok) throw new Error(r.error);
+      const text = r.content;
+      historyRef.current.push({ role: "assistant", content: text });
+      setReply(text);
+      setState("speaking");
+      speakingRef.current = true;
+      bargedRef.current = false;
+      await speak(text);
+    } catch (e: any) {
+      toast.error(e?.message || "AI error");
+    } finally {
+      speakingRef.current = false;
+      setState("listening");
     }
-    setState("idle");
   }
 
   useEffect(() => {
     stoppedRef.current = false;
-    loop();
+    const SR: any = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) {
+      toast.error("Voice not supported in this browser. Try Chrome.");
+      return;
+    }
+    const r = new SR();
+    r.continuous = true;
+    r.interimResults = true;
+    r.lang = navigator.language || "en-US";
+    recRef.current = r;
+
+    let silenceTimer: any = null;
+    const scheduleSubmit = () => {
+      clearTimeout(silenceTimer);
+      silenceTimer = setTimeout(() => {
+        const t = pendingRef.current.trim();
+        if (t) {
+          pendingRef.current = "";
+          setTranscript("");
+          askAndSpeak(t);
+        }
+      }, 1100);
+    };
+
+    r.onresult = (ev: any) => {
+      let interim = "";
+      let finalAdd = "";
+      for (let i = ev.resultIndex; i < ev.results.length; i++) {
+        const res = ev.results[i];
+        if (res.isFinal) finalAdd += res[0].transcript + " ";
+        else interim += res[0].transcript;
+      }
+      if ((interim || finalAdd) && speakingRef.current) {
+        window.speechSynthesis.cancel();
+      }
+      if (finalAdd) pendingRef.current += finalAdd;
+      setTranscript(pendingRef.current + interim);
+      if (finalAdd) scheduleSubmit();
+    };
+    r.onerror = () => {};
+    r.onend = () => {
+      if (!stoppedRef.current) {
+        try { r.start(); } catch { /* ignore */ }
+      }
+    };
+    setState("listening");
+    try { r.start(); } catch { /* ignore */ }
+
     return () => {
       stoppedRef.current = true;
-      try { recRef.current?.stop(); } catch { /* ignore */ }
+      clearTimeout(silenceTimer);
+      try { r.stop(); } catch { /* ignore */ }
       if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -859,8 +932,14 @@ function LiveTalk({ mode, onClose }: { mode: ModeId; onClose: () => void }) {
     state === "thinking" ? "Thinking…" :
     state === "speaking" ? "Speaking…" : "Connecting…";
 
+  const ringColor =
+    state === "listening" ? "from-sky-400 to-blue-600" :
+    state === "speaking" ? "from-emerald-400 to-green-600" :
+    state === "thinking" ? "from-amber-400 to-orange-600" :
+    "from-muted to-muted";
+
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/95 backdrop-blur">
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-b from-background via-background to-background/95 backdrop-blur-xl">
       <button
         onClick={end}
         className="absolute right-4 top-4 rounded-full p-2 text-muted-foreground hover:bg-muted"
@@ -868,25 +947,49 @@ function LiveTalk({ mode, onClose }: { mode: ModeId; onClose: () => void }) {
       >
         <X className="h-5 w-5" />
       </button>
-      <div
-        className={`flex h-32 w-32 items-center justify-center rounded-full ${
-          state === "listening" ? "bg-red-500 animate-pulse" :
-          state === "speaking" ? "bg-green-600 animate-pulse" :
-          state === "thinking" ? "bg-foreground" : "bg-muted"
-        }`}
-      >
-        <Radio className="h-12 w-12 text-white" />
+
+      <div className="relative flex h-56 w-56 items-center justify-center">
+        <div className={`absolute inset-0 rounded-full bg-gradient-to-br ${ringColor} opacity-20 blur-2xl animate-pulse`} />
+        <div className={`absolute inset-4 rounded-full bg-gradient-to-br ${ringColor} opacity-30 blur-xl`} />
+        <div className={`relative flex h-40 w-40 items-center justify-center rounded-full bg-gradient-to-br ${ringColor} shadow-2xl`}>
+          <div className="flex items-end gap-[3px] h-16">
+            {levels.map((v, i) => {
+              const speakingWave = 0.35 + Math.abs(Math.sin(Date.now() / 140 + i * 0.6)) * 0.55;
+              const raw = state === "speaking" ? speakingWave : v * 1.8;
+              const h = Math.max(6, Math.min(64, raw * 64));
+              return (
+                <span
+                  key={i}
+                  className="w-[3px] rounded-full bg-white/90 transition-[height] duration-75"
+                  style={{ height: `${h}px` }}
+                />
+              );
+            })}
+          </div>
+        </div>
       </div>
+
       <div className="mt-6 text-lg font-semibold">{label}</div>
-      <div className="mt-4 max-w-md px-6 text-center text-sm text-muted-foreground min-h-12">
-        {state === "speaking" ? reply.slice(0, 240) : transcript || "Say something to Genelo…"}
+      <div className="mt-3 max-w-md px-6 text-center text-sm text-muted-foreground min-h-12">
+        {state === "speaking"
+          ? reply.slice(0, 260)
+          : transcript || "Just start talking — I'm listening. You can interrupt me anytime."}
       </div>
-      <button
-        onClick={end}
-        className="mt-8 rounded-full bg-red-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-red-600"
-      >
-        End call
-      </button>
+
+      <div className="mt-8 flex items-center gap-3">
+        <button
+          onClick={() => { if (speakingRef.current) window.speechSynthesis.cancel(); }}
+          className="rounded-full border border-border bg-background px-4 py-2 text-xs font-medium hover:bg-muted"
+        >
+          Interrupt
+        </button>
+        <button
+          onClick={end}
+          className="rounded-full bg-red-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-red-600"
+        >
+          End call
+        </button>
+      </div>
     </div>
   );
 }
