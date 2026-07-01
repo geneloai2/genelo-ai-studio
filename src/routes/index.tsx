@@ -128,16 +128,42 @@ function HomePage() {
       .catch(() => {});
   }, [user, search.chat, getChatFn]);
 
+  // Smart auto-scroll: pin to bottom unless user scrolls up to read.
+  const pinnedRef = useRef(true);
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const doScroll = () => el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-    doScroll();
-    const r1 = requestAnimationFrame(doScroll);
-    const t = setTimeout(doScroll, 120);
+    const NEAR = 120;
+    const isNear = () => el.scrollHeight - el.scrollTop - el.clientHeight < NEAR;
+    const onScroll = () => { pinnedRef.current = isNear(); };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // Force-pin whenever the user sends a new message.
+  useEffect(() => {
+    if (messages[messages.length - 1]?.role === "user") pinnedRef.current = true;
+  }, [messages]);
+
+  // Continuous scroll while pinned — new messages, streaming, async images, layout shifts.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const scroll = (smooth = true) => {
+      if (!pinnedRef.current) return;
+      el.scrollTo({ top: el.scrollHeight, behavior: smooth ? "smooth" : "auto" });
+    };
+    scroll(false);
+    const raf = requestAnimationFrame(() => scroll(true));
+    const mo = new MutationObserver(() => scroll(true));
+    mo.observe(el, { childList: true, subtree: true, characterData: true });
+    const ro = new ResizeObserver(() => scroll(true));
+    ro.observe(el);
+    Array.from(el.children).forEach((c) => ro.observe(c as Element));
     return () => {
-      cancelAnimationFrame(r1);
-      clearTimeout(t);
+      cancelAnimationFrame(raf);
+      mo.disconnect();
+      ro.disconnect();
     };
   }, [messages, busy]);
 
