@@ -506,7 +506,7 @@ function HomePage() {
       </header>
 
       {/* Messages */}
-      <main ref={scrollRef} className="mx-auto w-full max-w-3xl flex-1 overflow-y-auto px-4 py-6">
+      <main ref={scrollRef} className="mx-auto w-full max-w-3xl flex-1 overflow-y-auto overflow-x-hidden px-4 py-6 [overscroll-behavior:contain] [scroll-behavior:smooth] [overflow-anchor:none]">
         {messages.length === 0 ? (
           <Welcome name={displayName} onPick={(t) => send(t)} />
         ) : (
