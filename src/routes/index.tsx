@@ -69,6 +69,8 @@ function HomePage() {
   const [listening, setListening] = useState(false);
   const [speakReplies, setSpeakReplies] = useState(false);
   const [liveOpen, setLiveOpen] = useState(false);
+  const [showJump, setShowJump] = useState(false);
+
   const recognitionRef = useRef<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
