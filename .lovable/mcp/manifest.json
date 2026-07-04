@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "sdk_version": "0.20.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "none"
+  },
+  "mcp": {
+    "server": {
+      "name": "genelo-ai-mcp",
+      "version": "0.1.0",
+      "title": "Genelo AI"
+    },
+    "tools": [
+      {
+        "name": "about_genelo",
+        "title": "About Genelo AI",
+        "description": "Return background information about Genelo AI, its founder Genelo Moses Mwazembe, and GNL Technology.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_modes",
+        "title": "List Genelo AI modes",
+        "description": "List the available Genelo AI chat modes (Gn 2.0, Gn 3.5, Gn Flash 6, Gn Pro), including whether each mode is Pro-only and its daily image limit for free users.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_pricing",
+        "title": "Get Genelo AI pricing",
+        "description": "Return the current Genelo AI pricing plans, including the free tier and Genelo Pro subscription.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
