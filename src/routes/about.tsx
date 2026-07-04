@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import founderAsset from "@/assets/founder-genelo.jpg.asset.json";
 
-const FOUNDER_IMAGE = "https://geneloai.lovable.app/founder-genelo.jpg";
+const FOUNDER_IMAGE = `https://geneloai.lovable.app${founderAsset.url}`;
+
 
 export const Route = createFileRoute("/about")({
   head: () => ({
