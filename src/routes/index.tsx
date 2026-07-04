@@ -128,87 +128,13 @@ function HomePage() {
       .catch(() => {});
   }, [user, search.chat, getChatFn]);
 
-  // Smart auto-scroll: pin to bottom unless the user scrolls up to read.
-  const pinnedRef = useRef(true);
-  const userScrollingRef = useRef(false);
+  // Simple scroll-to-bottom when messages change (does not fight the user).
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const NEAR = 140;
-    const isNear = () => el.scrollHeight - el.scrollTop - el.clientHeight < NEAR;
+    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+  }, [messages.length]);
 
-    let releaseT: ReturnType<typeof setTimeout> | null = null;
-    const startUserGesture = () => {
-      userScrollingRef.current = true;
-      if (releaseT) clearTimeout(releaseT);
-    };
-    const endUserGesture = () => {
-      if (releaseT) clearTimeout(releaseT);
-      // Give momentum scroll time to settle, then re-evaluate pin state.
-      releaseT = setTimeout(() => {
-        userScrollingRef.current = false;
-        pinnedRef.current = isNear();
-      }, 180);
-    };
-    const onScroll = () => { if (!userScrollingRef.current) pinnedRef.current = isNear(); };
-
-    el.addEventListener("scroll", onScroll, { passive: true });
-    el.addEventListener("touchstart", startUserGesture, { passive: true });
-    el.addEventListener("touchmove", startUserGesture, { passive: true });
-    el.addEventListener("touchend", endUserGesture, { passive: true });
-    el.addEventListener("touchcancel", endUserGesture, { passive: true });
-    el.addEventListener("wheel", startUserGesture, { passive: true });
-    el.addEventListener("wheel", endUserGesture, { passive: true });
-    return () => {
-      el.removeEventListener("scroll", onScroll);
-      el.removeEventListener("touchstart", startUserGesture);
-      el.removeEventListener("touchmove", startUserGesture);
-      el.removeEventListener("touchend", endUserGesture);
-      el.removeEventListener("touchcancel", endUserGesture);
-      el.removeEventListener("wheel", startUserGesture);
-      el.removeEventListener("wheel", endUserGesture);
-      if (releaseT) clearTimeout(releaseT);
-    };
-  }, []);
-
-  // Force-pin whenever the user sends a new message.
-  useEffect(() => {
-    if (messages[messages.length - 1]?.role === "user") pinnedRef.current = true;
-  }, [messages]);
-
-  // rAF-throttled auto-scroll — coalesces streaming/mutation/resize bursts
-  // into one paint, and never fights the user's finger.
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    let raf = 0;
-    let lastTop = -1;
-    const schedule = () => {
-      if (raf) return;
-      raf = requestAnimationFrame(() => {
-        raf = 0;
-        if (!pinnedRef.current || userScrollingRef.current) return;
-        const target = el.scrollHeight;
-        if (target === lastTop) return;
-        lastTop = target;
-        el.scrollTo({ top: target, behavior: "smooth" });
-      });
-    };
-    // Jump instantly on mount / message change, then keep pinned via rAF.
-    if (pinnedRef.current && !userScrollingRef.current) {
-      el.scrollTo({ top: el.scrollHeight, behavior: "auto" });
-    }
-    const mo = new MutationObserver(schedule);
-    mo.observe(el, { childList: true, subtree: true, characterData: true });
-    const ro = new ResizeObserver(schedule);
-    ro.observe(el);
-    Array.from(el.children).forEach((c) => ro.observe(c as Element));
-    return () => {
-      if (raf) cancelAnimationFrame(raf);
-      mo.disconnect();
-      ro.disconnect();
-    };
-  }, [messages, busy]);
 
   const displayName =
     (profile?.display_name && profile.display_name.trim()) ||
@@ -549,7 +475,7 @@ function HomePage() {
       </header>
 
       {/* Messages */}
-      <main ref={scrollRef} className="mx-auto w-full max-w-3xl flex-1 overflow-y-auto overflow-x-hidden px-4 py-6 [overscroll-behavior:contain] [scroll-behavior:smooth] [overflow-anchor:none]">
+      <main ref={scrollRef} className="mx-auto w-full max-w-3xl flex-1 overflow-y-auto overflow-x-hidden px-4 py-6">
         {messages.length === 0 ? (
           <Welcome name={displayName} onPick={(t) => send(t)} />
         ) : (
