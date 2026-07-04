@@ -69,6 +69,8 @@ function HomePage() {
   const [listening, setListening] = useState(false);
   const [speakReplies, setSpeakReplies] = useState(false);
   const [liveOpen, setLiveOpen] = useState(false);
+  const [showJump, setShowJump] = useState(false);
+
   const recognitionRef = useRef<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -134,6 +136,26 @@ function HomePage() {
     if (!el) return;
     el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [messages.length]);
+
+  // Track whether the user has scrolled up — show a "Jump to latest" button.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const check = () => {
+      const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+      setShowJump(distance > 200);
+    };
+    check();
+    el.addEventListener("scroll", check, { passive: true });
+    return () => el.removeEventListener("scroll", check);
+  }, [messages.length, busy]);
+
+  function jumpToLatest() {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+  }
+
 
 
   const displayName =
@@ -475,22 +497,35 @@ function HomePage() {
       </header>
 
       {/* Messages */}
-      <main ref={scrollRef} className="mx-auto w-full max-w-3xl flex-1 overflow-y-auto overflow-x-hidden px-4 py-6">
-        {messages.length === 0 ? (
-          <Welcome name={displayName} onPick={(t) => send(t)} />
-        ) : (
-          <div className="space-y-8">
-            {messages.map((m, i) => (
-              <Bubble key={i} msg={m} />
-            ))}
-            {busy && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" /> Genelo is thinking…
-              </div>
-            )}
-          </div>
+      <div className="relative flex flex-1 flex-col overflow-hidden bg-muted/30">
+        <main ref={scrollRef} className="mx-auto w-full max-w-3xl flex-1 overflow-y-auto overflow-x-hidden px-4 py-6">
+          {messages.length === 0 ? (
+            <Welcome name={displayName} onPick={(t) => send(t)} />
+          ) : (
+            <div className="space-y-8">
+              {messages.map((m, i) => (
+                <Bubble key={i} msg={m} />
+              ))}
+              {busy && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Genelo is thinking…
+                </div>
+              )}
+            </div>
+          )}
+        </main>
+        {showJump && (
+          <button
+            onClick={jumpToLatest}
+            className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-border bg-background px-3.5 py-2 text-xs font-medium shadow-lg hover:bg-muted"
+            aria-label="Jump to latest message"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5"><path d="M6 9l6 6 6-6"/></svg>
+            Jump to latest
+          </button>
         )}
-      </main>
+      </div>
+
 
       {/* Composer */}
       <div className="sticky bottom-0 border-t border-border bg-background">
