@@ -137,6 +137,26 @@ function HomePage() {
     el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [messages.length]);
 
+  // Track whether the user has scrolled up — show a "Jump to latest" button.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const check = () => {
+      const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+      setShowJump(distance > 200);
+    };
+    check();
+    el.addEventListener("scroll", check, { passive: true });
+    return () => el.removeEventListener("scroll", check);
+  }, [messages.length, busy]);
+
+  function jumpToLatest() {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+  }
+
+
 
   const displayName =
     (profile?.display_name && profile.display_name.trim()) ||
