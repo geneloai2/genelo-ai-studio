@@ -91,9 +91,7 @@ function HomePage() {
   const listChatsFn = useServerFn(listChats);
   const deleteChatFn = useServerFn(deleteChat);
 
-  useEffect(() => {
-    if (!loading && !user) navigate({ to: "/login" });
-  }, [loading, user, navigate]);
+  // Guests can browse and preview the chat UI; sending requires sign-in.
 
   useEffect(() => {
     if (!user) return;
@@ -244,6 +242,11 @@ function HomePage() {
   async function send(overrideText?: string) {
     const text = (overrideText ?? input).trim();
     if ((!text && attachments.length === 0) || busy) return;
+    if (!user) {
+      toast.message("Sign in to chat with Genelo AI");
+      navigate({ to: "/login" });
+      return;
+    }
     const atts = attachments;
     const userMsg: Msg = { role: "user", content: text || "(see attachment)", attachments: atts.length ? atts : undefined };
     const baseMessages = [...messages, userMsg];
@@ -342,7 +345,7 @@ function HomePage() {
     navigate({ to: "/", search: {} as any });
   }
 
-  if (loading || !user) {
+  if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -430,7 +433,7 @@ function HomePage() {
 
       {/* Header */}
       <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
+        <div className="mx-auto flex w-full items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setSidebarOpen(true)}
@@ -450,55 +453,67 @@ function HomePage() {
             </div>
           </div>
           <div className="flex items-center gap-1">
-            {isAdmin && (
+            {!user ? (
               <Link
-                to="/admin"
-                className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent"
+                to="/login"
+                className="inline-flex items-center gap-1 rounded-full bg-foreground px-4 py-1.5 text-xs font-semibold text-background hover:opacity-90"
               >
-                <Shield className="h-3.5 w-3.5" /> Admin
+                Sign in
               </Link>
+            ) : (
+              <>
+                {isAdmin && (
+                  <Link
+                    to="/admin"
+                    className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent"
+                  >
+                    <Shield className="h-3.5 w-3.5" /> Admin
+                  </Link>
+                )}
+                <button
+                  onClick={newChat}
+                  className="rounded-full p-2 text-muted-foreground hover:bg-muted"
+                  aria-label="New chat"
+                  title="New chat"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+                <Link
+                  to="/settings"
+                  className="rounded-full p-1 hover:opacity-80"
+                  aria-label="Settings"
+                  title="Settings"
+                >
+                  {profile?.avatar_url ? (
+                    <img
+                      src={profile.avatar_url}
+                      alt="Profile"
+                      className="h-8 w-8 rounded-full border border-border object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-semibold uppercase text-foreground">
+                      {displayName.slice(0, 1)}
+                    </div>
+                  )}
+                </Link>
+                <Link
+                  to="/settings"
+                  className="rounded-full p-2 text-muted-foreground hover:bg-muted"
+                  aria-label="Settings"
+                  title="Settings"
+                >
+                  <SettingsIcon className="h-4 w-4" />
+                </Link>
+              </>
             )}
-            <button
-              onClick={newChat}
-              className="rounded-full p-2 text-muted-foreground hover:bg-muted"
-              aria-label="New chat"
-              title="New chat"
-            >
-              <Plus className="h-4 w-4" />
-            </button>
-            <Link
-              to="/settings"
-              className="rounded-full p-1 hover:opacity-80"
-              aria-label="Settings"
-              title="Settings"
-            >
-              {profile?.avatar_url ? (
-                <img
-                  src={profile.avatar_url}
-                  alt="Profile"
-                  className="h-8 w-8 rounded-full border border-border object-cover"
-                />
-              ) : (
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-semibold uppercase text-foreground">
-                  {displayName.slice(0, 1)}
-                </div>
-              )}
-            </Link>
-            <Link
-              to="/settings"
-              className="rounded-full p-2 text-muted-foreground hover:bg-muted"
-              aria-label="Settings"
-              title="Settings"
-            >
-              <SettingsIcon className="h-4 w-4" />
-            </Link>
           </div>
         </div>
       </header>
 
+
       {/* Messages */}
       <div className="relative flex flex-1 flex-col overflow-hidden bg-muted/30">
-        <main ref={scrollRef} className="mx-auto w-full max-w-3xl flex-1 overflow-y-auto overflow-x-hidden px-4 py-6">
+        <main ref={scrollRef} className="mx-auto w-full flex-1 overflow-y-auto overflow-x-hidden px-4 py-6 md:max-w-3xl">
           {messages.length === 0 ? (
             <Welcome name={displayName} onPick={(t) => send(t)} />
           ) : (
@@ -529,7 +544,7 @@ function HomePage() {
 
       {/* Composer */}
       <div className="sticky bottom-0 border-t border-border bg-background">
-        <div className="mx-auto max-w-3xl px-4 py-3">
+        <div className="mx-auto w-full px-4 py-3 md:max-w-3xl">
           {attachments.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-2">
               {attachments.map((a, i) => (
