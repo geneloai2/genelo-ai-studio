@@ -1,7 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
+import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import type { Database } from "@/integrations/supabase/types";
 import { MODES } from "./modes";
 
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
@@ -129,16 +131,39 @@ const ChatInput = z.object({
 });
 
 export const chatWithGenelo = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((d) => ChatInput.parse(d))
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data }) => {
     const mode = MODES.find((m) => m.id === data.modeId) ?? MODES[0];
 
-    const { data: profile } = await context.supabase
-      .from("profiles")
-      .select("plan, display_name, email")
-      .eq("id", context.userId)
-      .maybeSingle();
+    let profile: { plan: string; display_name?: string | null; email?: string | null } | null = null;
+    const authHeader = getRequest()?.headers.get("authorization");
+    const token = authHeader?.startsWith("Bearer ") ? authHeader.replace("Bearer ", "") : undefined;
+
+    if (token) {
+      const SUPABASE_URL = process.env.SUPABASE_URL;
+      const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
+      if (SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY) {
+        const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+          global: { headers: { Authorization: `Bearer ${token}` } },
+          auth: {
+            storage: undefined,
+            persistSession: false,
+            autoRefreshToken: false,
+          },
+        });
+
+        const { data: claimsData } = await supabase.auth.getClaims(token);
+        const userId = claimsData?.claims?.sub;
+        if (userId) {
+          const { data: row } = await supabase
+            .from("profiles")
+            .select("plan, display_name, email")
+            .eq("id", userId)
+            .maybeSingle();
+          profile = row;
+        }
+      }
+    }
 
     if (mode.pro && (!profile || profile.plan !== "pro")) {
       return {
@@ -193,6 +218,7 @@ export const generateImage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => ImageInput.parse(d))
   .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const mode = MODES.find((m) => m.id === data.modeId) ?? MODES[0];
 
     const { data: profile } = await context.supabase
