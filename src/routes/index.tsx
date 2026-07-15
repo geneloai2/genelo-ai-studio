@@ -544,7 +544,7 @@ function HomePage() {
 
       {/* Composer */}
       <div className="sticky bottom-0 border-t border-border bg-background">
-        <div className="mx-auto max-w-3xl px-4 py-3">
+        <div className="mx-auto w-full px-4 py-3 md:max-w-3xl">
           {attachments.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-2">
               {attachments.map((a, i) => (
