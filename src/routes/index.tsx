@@ -91,7 +91,7 @@ function HomePage() {
   const listChatsFn = useServerFn(listChats);
   const deleteChatFn = useServerFn(deleteChat);
 
-  // Guests can browse and preview the chat UI; sending requires sign-in.
+  // Guests can start chatting immediately; signed-in users also get saved history and Pro features.
 
   useEffect(() => {
     if (!user) return;
@@ -242,11 +242,6 @@ function HomePage() {
   async function send(overrideText?: string) {
     const text = (overrideText ?? input).trim();
     if ((!text && attachments.length === 0) || busy) return;
-    if (!user) {
-      toast.message("Sign in to chat with Genelo AI");
-      navigate({ to: "/login" });
-      return;
-    }
     const atts = attachments;
     const userMsg: Msg = { role: "user", content: text || "(see attachment)", attachments: atts.length ? atts : undefined };
     const baseMessages = [...messages, userMsg];
@@ -297,6 +292,7 @@ function HomePage() {
         setMessages(finalMessages);
       }
 
+      if (!user) return;
       try {
         // Strip large dataUrls before saving to keep payload small
         const toSave = finalMessages.map((m) => ({
