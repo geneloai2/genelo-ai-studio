@@ -513,7 +513,7 @@ function HomePage() {
 
       {/* Messages */}
       <div className="relative flex flex-1 flex-col overflow-hidden bg-muted/30">
-        <main ref={scrollRef} className="mx-auto w-full max-w-3xl flex-1 overflow-y-auto overflow-x-hidden px-4 py-6">
+        <main ref={scrollRef} className="mx-auto w-full flex-1 overflow-y-auto overflow-x-hidden px-4 py-6 md:max-w-3xl">
           {messages.length === 0 ? (
             <Welcome name={displayName} onPick={(t) => send(t)} />
           ) : (
