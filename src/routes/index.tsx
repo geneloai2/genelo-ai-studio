@@ -242,6 +242,11 @@ function HomePage() {
   async function send(overrideText?: string) {
     const text = (overrideText ?? input).trim();
     if ((!text && attachments.length === 0) || busy) return;
+    if (!user) {
+      toast.message("Sign in to chat with Genelo AI");
+      navigate({ to: "/login" });
+      return;
+    }
     const atts = attachments;
     const userMsg: Msg = { role: "user", content: text || "(see attachment)", attachments: atts.length ? atts : undefined };
     const baseMessages = [...messages, userMsg];
