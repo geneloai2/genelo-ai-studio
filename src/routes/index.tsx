@@ -91,9 +91,7 @@ function HomePage() {
   const listChatsFn = useServerFn(listChats);
   const deleteChatFn = useServerFn(deleteChat);
 
-  useEffect(() => {
-    if (!loading && !user) navigate({ to: "/login" });
-  }, [loading, user, navigate]);
+  // Guests can browse and preview the chat UI; sending requires sign-in.
 
   useEffect(() => {
     if (!user) return;
