@@ -433,7 +433,7 @@ function HomePage() {
 
       {/* Header */}
       <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
+        <div className="mx-auto flex w-full items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setSidebarOpen(true)}
@@ -453,51 +453,63 @@ function HomePage() {
             </div>
           </div>
           <div className="flex items-center gap-1">
-            {isAdmin && (
+            {!user ? (
               <Link
-                to="/admin"
-                className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent"
+                to="/login"
+                className="inline-flex items-center gap-1 rounded-full bg-foreground px-4 py-1.5 text-xs font-semibold text-background hover:opacity-90"
               >
-                <Shield className="h-3.5 w-3.5" /> Admin
+                Sign in
               </Link>
+            ) : (
+              <>
+                {isAdmin && (
+                  <Link
+                    to="/admin"
+                    className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent"
+                  >
+                    <Shield className="h-3.5 w-3.5" /> Admin
+                  </Link>
+                )}
+                <button
+                  onClick={newChat}
+                  className="rounded-full p-2 text-muted-foreground hover:bg-muted"
+                  aria-label="New chat"
+                  title="New chat"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+                <Link
+                  to="/settings"
+                  className="rounded-full p-1 hover:opacity-80"
+                  aria-label="Settings"
+                  title="Settings"
+                >
+                  {profile?.avatar_url ? (
+                    <img
+                      src={profile.avatar_url}
+                      alt="Profile"
+                      className="h-8 w-8 rounded-full border border-border object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-semibold uppercase text-foreground">
+                      {displayName.slice(0, 1)}
+                    </div>
+                  )}
+                </Link>
+                <Link
+                  to="/settings"
+                  className="rounded-full p-2 text-muted-foreground hover:bg-muted"
+                  aria-label="Settings"
+                  title="Settings"
+                >
+                  <SettingsIcon className="h-4 w-4" />
+                </Link>
+              </>
             )}
-            <button
-              onClick={newChat}
-              className="rounded-full p-2 text-muted-foreground hover:bg-muted"
-              aria-label="New chat"
-              title="New chat"
-            >
-              <Plus className="h-4 w-4" />
-            </button>
-            <Link
-              to="/settings"
-              className="rounded-full p-1 hover:opacity-80"
-              aria-label="Settings"
-              title="Settings"
-            >
-              {profile?.avatar_url ? (
-                <img
-                  src={profile.avatar_url}
-                  alt="Profile"
-                  className="h-8 w-8 rounded-full border border-border object-cover"
-                />
-              ) : (
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-semibold uppercase text-foreground">
-                  {displayName.slice(0, 1)}
-                </div>
-              )}
-            </Link>
-            <Link
-              to="/settings"
-              className="rounded-full p-2 text-muted-foreground hover:bg-muted"
-              aria-label="Settings"
-              title="Settings"
-            >
-              <SettingsIcon className="h-4 w-4" />
-            </Link>
           </div>
         </div>
       </header>
+
 
       {/* Messages */}
       <div className="relative flex flex-1 flex-col overflow-hidden bg-muted/30">
