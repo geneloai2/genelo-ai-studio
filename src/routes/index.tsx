@@ -345,7 +345,7 @@ function HomePage() {
     navigate({ to: "/", search: {} as any });
   }
 
-  if (loading || !user) {
+  if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
