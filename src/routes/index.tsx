@@ -28,8 +28,12 @@ import {
   VolumeX,
   FileText,
   Radio,
+  Download,
 } from "lucide-react";
 import { toast, Toaster } from "sonner";
+
+const APK_DOWNLOAD_URL =
+  "https://drive.google.com/uc?export=download&id=1PHL7ek6zEwz0rY21PfztwdI1IRGpBTfW";
 
 export const Route = createFileRoute("/")({
   validateSearch: (s: Record<string, unknown>) => ({
