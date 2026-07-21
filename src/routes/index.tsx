@@ -596,7 +596,14 @@ function HomePage() {
                 }
               }}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
+                // On native (APK) or touch devices, let Enter insert a newline.
+                // Sending is done via the send button.
+                const isNative =
+                  typeof window !== "undefined" &&
+                  ((window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } })
+                    .Capacitor?.isNativePlatform?.() ||
+                    window.matchMedia?.("(pointer: coarse)").matches);
+                if (e.key === "Enter" && !e.shiftKey && !isNative) {
                   e.preventDefault();
                   send();
                 }
