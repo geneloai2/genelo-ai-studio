@@ -164,6 +164,21 @@ function AboutPage() {
           quick calculations — all in one simple interface.
         </p>
 
+        <h2 className="mt-10 text-2xl font-semibold">Get the Android app</h2>
+        <p>
+          Install Genelo AI on your Android phone as an APK — no Play Store
+          needed.
+        </p>
+        <a
+          href={APK_DOWNLOAD_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-4 inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-sm font-semibold text-background transition-opacity hover:opacity-90"
+        >
+          <Download className="h-4 w-4" />
+          Download Genelo AI APK
+        </a>
+
         <h2 className="mt-10 text-2xl font-semibold">Family</h2>
         <ul>
           <li><strong>Father:</strong> Moses Mwazembe</li>
