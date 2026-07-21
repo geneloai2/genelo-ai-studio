@@ -453,6 +453,17 @@ function HomePage() {
             </div>
           </div>
           <div className="flex items-center gap-1">
+            <a
+              href={APK_DOWNLOAD_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent"
+              aria-label="Download Genelo AI Android APK"
+              title="Download Android APK"
+            >
+              <Download className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Get APK</span>
+            </a>
             {!user ? (
               <Link
                 to="/login"
