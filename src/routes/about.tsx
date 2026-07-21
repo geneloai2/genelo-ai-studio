@@ -1,7 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import founderAsset from "@/assets/founder-genelo.jpg.asset.json";
+import { Download } from "lucide-react";
 
 const FOUNDER_IMAGE = `https://geneloai.lovable.app${founderAsset.url}`;
+const APK_DOWNLOAD_URL =
+  "https://drive.google.com/uc?export=download&id=1PHL7ek6zEwz0rY21PfztwdI1IRGpBTfW";
 
 
 export const Route = createFileRoute("/about")({
