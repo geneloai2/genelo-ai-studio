@@ -35,6 +35,12 @@ import { toast, Toaster } from "sonner";
 const APK_DOWNLOAD_URL =
   "https://drive.google.com/uc?export=download&id=1PHL7ek6zEwz0rY21PfztwdI1IRGpBTfW";
 
+function isNativeApp(): boolean {
+  if (typeof window === "undefined") return false;
+  return !!(window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } })
+    .Capacitor?.isNativePlatform?.();
+}
+
 export const Route = createFileRoute("/")({
   validateSearch: (s: Record<string, unknown>) => ({
     chat: typeof s.chat === "string" ? s.chat : undefined,
@@ -453,17 +459,19 @@ function HomePage() {
             </div>
           </div>
           <div className="flex items-center gap-1">
-            <a
-              href={APK_DOWNLOAD_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent"
-              aria-label="Download Genelo AI Android APK"
-              title="Download Android APK"
-            >
-              <Download className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Get APK</span>
-            </a>
+            {!isNativeApp() && (
+              <a
+                href={APK_DOWNLOAD_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent"
+                aria-label="Download Genelo AI Android APK"
+                title="Download Android APK"
+              >
+                <Download className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Get APK</span>
+              </a>
+            )}
             {!user ? (
               <Link
                 to="/login"
@@ -810,15 +818,17 @@ function Welcome({ name, onPick }: { name: string; onPick: (text: string) => voi
           </button>
         ))}
       </div>
-      <a
-        href={APK_DOWNLOAD_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="mt-6 inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-sm font-semibold text-background transition-opacity hover:opacity-90"
-      >
-        <Download className="h-4 w-4" />
-        Download Genelo AI Android APK
-      </a>
+      {!isNativeApp() && (
+        <a
+          href={APK_DOWNLOAD_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-6 inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-sm font-semibold text-background transition-opacity hover:opacity-90"
+        >
+          <Download className="h-4 w-4" />
+          Download Genelo AI Android APK
+        </a>
+      )}
     </div>
   );
 }
