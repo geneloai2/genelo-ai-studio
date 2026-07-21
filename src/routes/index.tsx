@@ -35,6 +35,12 @@ import { toast, Toaster } from "sonner";
 const APK_DOWNLOAD_URL =
   "https://drive.google.com/uc?export=download&id=1PHL7ek6zEwz0rY21PfztwdI1IRGpBTfW";
 
+function isNativeApp(): boolean {
+  if (typeof window === "undefined") return false;
+  return !!(window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } })
+    .Capacitor?.isNativePlatform?.();
+}
+
 export const Route = createFileRoute("/")({
   validateSearch: (s: Record<string, unknown>) => ({
     chat: typeof s.chat === "string" ? s.chat : undefined,
