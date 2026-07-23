@@ -84,6 +84,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:description", content: "Genelo AI: a professional AI for front-end coding in any language, research, teaching, image generation, Q&A and calculations." },
       { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/e9a8aca5-428f-4bab-a058-c911e0b5d150" },
       { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/e9a8aca5-428f-4bab-a058-c911e0b5d150" },
+      { name: "google-site-verification", content: "6_JheUIra4dgwC_ct71XoTH6yEGxjizhqaMzrLDn8M4" },
       { name: "yandex-verification", content: "f24238a44a12a0ac" },
     ],
     links: [
