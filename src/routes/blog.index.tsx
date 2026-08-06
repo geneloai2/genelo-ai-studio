@@ -69,6 +69,9 @@ function BlogIndex() {
       <p className="mt-3 text-muted-foreground">
         Updates, guides and stories from the team behind Genelo AI.
       </p>
+
+      <AdSenseUnit slot={AD_SLOT} format="auto" />
+
       <ul className="mt-10 space-y-6">
         {posts.map((p) => (
           <li key={p.slug} className="border-b border-border pb-6">
@@ -84,6 +87,8 @@ function BlogIndex() {
           </li>
         ))}
       </ul>
+
+      <AdSenseUnit slot={AD_SLOT} format="auto" />
     </main>
   );
 }
