@@ -5,7 +5,10 @@ import { Sparkles, Check, Crown, Loader2, Smartphone, CreditCard } from "lucide-
 import { MODES } from "@/lib/modes";
 import { startProCheckout } from "@/lib/flutterwave.functions";
 import { startZenoPayCheckout } from "@/lib/zenopay.functions";
+import { AdSenseUnit } from "@/components/AdSense";
 import { toast } from "sonner";
+
+const AD_SLOT = import.meta.env.VITE_ADSENSE_SLOT_ID as string | undefined;
 
 export const Route = createFileRoute("/pricing")({
   head: () => ({
