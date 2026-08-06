@@ -111,7 +111,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
             "@type": "Person",
             name: "Genelo Moses Mwazembe",
             url: "https://geneloai.lovable.app/about",
-            image: "https://geneloai.lovable.app/founder-genelo.jpg",
+            image: "https://geneloai.lovable.app/__l5e/assets-v1/759dc716-23f0-421c-b9c6-a3ab90a11176/founder-genelo.jpg",
           },
           contactPoint: [
             {
