@@ -165,6 +165,49 @@ function AboutPage() {
           coding help, research, teaching, image generation, Q&amp;A and
           quick calculations — all in one simple interface.
         </p>
+        <p>
+          Our goal is to lower the barrier to learning and building with AI.
+          Whether you are a student in Vwawa, a developer in Dar es Salaam,
+          or a researcher anywhere in the world, Genelo AI is built to help you
+          turn ideas into working products.
+        </p>
+
+        <AdSenseUnit slot={AD_SLOT} format="auto" />
+
+        <h2 className="mt-10 text-2xl font-semibold">Education</h2>
+        <p>
+          Genelo is a second-year student pursuing a Bachelor of Business in
+          Information and Communication Technology (BBICT) at Moshi
+          Co-operative University (MoCU), Department of Computer Science. His
+          studies cover software engineering, database systems, networking,
+          cybersecurity and system analysis — all of which shape how Genelo AI
+          is designed and built.
+        </p>
+
+        <h2 className="mt-10 text-2xl font-semibold">Other projects</h2>
+        <p>
+          Beyond Genelo AI, Genelo is also building{" "}
+          <a
+            href="https://genelopay.lovable.app"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline"
+          >
+            Genelo Pay
+          </a>{" "}
+          for digital payments in Tanzania, and{" "}
+          <a
+            href="https://geneloshop.lovable.app"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline"
+          >
+            Genelo Shop
+          </a>{" "}
+          for online shopping. Together these platforms form GNL Technology,
+          a growing technology company focused on practical African digital
+          solutions.
+        </p>
 
         <h2 className="mt-10 text-2xl font-semibold">Get the Android app</h2>
         <p>
@@ -180,6 +223,8 @@ function AboutPage() {
           <Download className="h-4 w-4" />
           Download Genelo AI APK
         </a>
+
+        <AdSenseUnit slot={AD_SLOT} format="auto" />
 
         <h2 className="mt-10 text-2xl font-semibold">Family</h2>
         <ul>
@@ -200,6 +245,10 @@ function AboutPage() {
           For support, partnerships or press, reach the Genelo AI team at{" "}
           <a href="mailto:support@geneloai.com" className="text-primary hover:underline">
             support@geneloai.com
+          </a>{" "}
+          or call/WhatsApp{" "}
+          <a href="tel:+255621673848" className="text-primary hover:underline">
+            +255 621 673 848
           </a>.
         </p>
       </article>
