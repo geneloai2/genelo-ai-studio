@@ -34,6 +34,18 @@ export function AdSenseUnit({
 
   useEffect(() => {
     if (!mounted || !slot || !ref.current) return;
+
+    // Load the AdSense script once, only when an ad unit is actually rendered.
+    if (!document.querySelector('script[data-adsbygoogle="true"]')) {
+      const script = document.createElement("script");
+      script.src =
+        "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1979381023727069";
+      script.async = true;
+      script.crossOrigin = "anonymous";
+      script.dataset.adsbygoogle = "true";
+      document.head.appendChild(script);
+    }
+
     try {
       (window.adsbygoogle = window.adsbygoogle || []).push({});
     } catch (e) {
