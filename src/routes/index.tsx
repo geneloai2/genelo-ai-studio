@@ -42,9 +42,10 @@ function isNativeApp(): boolean {
 }
 
 export const Route = createFileRoute("/")({
-  validateSearch: (s: Record<string, unknown>) => ({
-    chat: typeof s.chat === "string" ? s.chat : undefined,
-  }),
+  validateSearch: (s: Record<string, unknown>) => {
+    const chat = typeof s.chat === "string" ? s.chat : undefined;
+    return chat ? { chat } : {};
+  },
   head: () => ({
     meta: [
       { title: "Genelo AI — Code, research, images, calculations" },
