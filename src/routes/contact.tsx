@@ -92,11 +92,23 @@ function ContactPage() {
           Reach the founder, Genelo Moses Mwazembe, or the Genelo AI support team.
         </p>
 
+        <AdSenseUnit slot={AD_SLOT} format="auto" />
+
         <h2 className="mt-10 text-2xl font-semibold">Email</h2>
         <p>
           <a href={`mailto:${CONTACT_EMAIL}`} className="text-primary hover:underline">
             {CONTACT_EMAIL}
           </a>
+        </p>
+        <p>
+          For general inquiries, partnerships or press, you can also reach us at{" "}
+          <a href="mailto:geneloai2@gmail.com" className="text-primary hover:underline">
+            geneloai2@gmail.com
+          </a>{" "}
+          or{" "}
+          <a href="mailto:genelopay@gmail.com" className="text-primary hover:underline">
+            genelopay@gmail.com
+          </a>.
         </p>
 
         <h2 className="mt-10 text-2xl font-semibold">Phone / WhatsApp</h2>
@@ -105,6 +117,8 @@ function ContactPage() {
             {CONTACT_PHONE}
           </a>
         </p>
+
+        <AdSenseUnit slot={AD_SLOT} format="auto" />
 
         <h2 className="mt-10 text-2xl font-semibold">Address</h2>
         <p>
