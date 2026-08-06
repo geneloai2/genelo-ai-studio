@@ -197,6 +197,22 @@ function PricingPage() {
             </table>
           </div>
         </div>
+
+        <AdSenseUnit slot={AD_SLOT} format="auto" />
+
+        <div className="mt-10 rounded-2xl border border-border bg-card p-6 text-center">
+          <h2 className="text-xl font-semibold">Questions?</h2>
+          <p className="mt-2 text-muted-foreground">
+            Contact us at{" "}
+            <a href="mailto:support@geneloai.com" className="text-primary hover:underline">
+              support@geneloai.com
+            </a>{" "}
+            or via WhatsApp{" "}
+            <a href="tel:+255621673848" className="text-primary hover:underline">
+              +255 621 673 848
+            </a>.
+          </p>
+        </div>
       </main>
     </div>
   );
