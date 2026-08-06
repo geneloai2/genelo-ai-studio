@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { AdSenseUnit } from "@/components/AdSense";
 
 const CONTACT_EMAIL = "support@geneloai.com";
 const CONTACT_PHONE = "+255621673848";
@@ -13,6 +14,7 @@ const ADDRESS = {
   region: "Songwe Region",
   country: "Tanzania",
 };
+const AD_SLOT = import.meta.env.VITE_ADSENSE_SLOT_ID as string | undefined;
 
 export const Route = createFileRoute("/contact")({
   head: () => ({
