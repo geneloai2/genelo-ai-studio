@@ -35,10 +35,20 @@ function DocsPage() {
       <nav className="mb-8 text-sm">
         <Link to="/" className="text-primary hover:underline">← Back to Genelo AI</Link>
       </nav>
-      <h1 className="text-4xl font-bold tracking-tight">Documentation</h1>
-      <p className="mt-3 text-muted-foreground">
-        Everything you need to know to use Genelo AI effectively.
-      </p>
+      <div className="mb-6 flex items-center gap-3">
+        <img
+          src={LOGO_IMAGE}
+          alt="Genelo AI logo"
+          width={56}
+          height={56}
+          className="rounded-xl border border-border bg-background object-contain p-1 shadow-sm"
+          loading="eager"
+        />
+        <div>
+          <h1 className="m-0 text-4xl font-bold tracking-tight">Documentation</h1>
+          <p className="m-0 mt-1 text-sm text-muted-foreground">Everything you need to know</p>
+        </div>
+      </div>
 
       <AdSenseUnit slot={AD_SLOT} format="auto" />
 

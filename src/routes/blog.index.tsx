@@ -55,9 +55,11 @@ export const Route = createFileRoute("/blog/")({
       },
       { property: "og:title", content: "Genelo AI Blog" },
       { property: "og:description", content: "Updates, guides and stories from Genelo AI." },
-      { property: "og:url", content: "https://geneloai.lovable.app/blog" },
+      { property: "og:url", content: `${SITE_ORIGIN}/blog` },
+      { property: "og:image", content: LOGO_IMAGE },
+      { name: "twitter:image", content: LOGO_IMAGE },
     ],
-    links: [{ rel: "canonical", href: "https://geneloai.lovable.app/blog" }],
+    links: [{ rel: "canonical", href: `${SITE_ORIGIN}/blog` }],
   }),
   component: BlogIndex,
 });

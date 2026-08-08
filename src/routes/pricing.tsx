@@ -77,9 +77,14 @@ function PricingPage() {
       <header className="border-b border-border">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
           <Link to="/" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground text-background">
-              <Sparkles className="h-4 w-4" />
-            </div>
+            <img
+              src={LOGO_IMAGE}
+              alt="Genelo AI"
+              width={32}
+              height={32}
+              className="h-8 w-8 rounded-lg border border-border bg-background object-contain p-0.5"
+              loading="eager"
+            />
             <span className="font-semibold">Genelo AI</span>
           </Link>
           <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">
