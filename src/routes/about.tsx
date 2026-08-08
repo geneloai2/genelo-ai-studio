@@ -130,7 +130,20 @@ function AboutPage() {
         <Link to="/" className="text-primary hover:underline">← Back to Genelo AI</Link>
       </nav>
       <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1 className="text-4xl font-bold tracking-tight">About Genelo AI</h1>
+        <div className="mb-8 flex items-center gap-3">
+          <img
+            src={LOGO_IMAGE}
+            alt="Genelo AI logo"
+            width={56}
+            height={56}
+            className="rounded-xl border border-border bg-background object-contain p-1 shadow-sm"
+            loading="eager"
+          />
+          <div>
+            <h1 className="m-0 text-4xl font-bold tracking-tight">About Genelo AI</h1>
+            <p className="m-0 mt-1 text-sm text-muted-foreground">Founded & built in Tanzania</p>
+          </div>
+        </div>
         <p className="mt-4 text-lg text-muted-foreground">
           Genelo AI is an AI assistant for coding, research, image generation
           and everyday questions — founded and built by{" "}
@@ -138,14 +151,22 @@ function AboutPage() {
         </p>
 
         <h2 className="mt-10 text-2xl font-semibold">Who is Genelo Moses Mwazembe?</h2>
-        <div className="my-6 flex justify-center">
+        <div className="my-6 grid gap-4 sm:grid-cols-2">
           <img
             src={FOUNDER_IMAGE}
             alt="Genelo Moses Mwazembe — founder and owner of Genelo AI"
             width={400}
             height={400}
-            className="rounded-2xl border border-border object-cover shadow-sm"
+            className="w-full rounded-2xl border border-border object-cover shadow-sm"
             loading="eager"
+          />
+          <img
+            src={LOGO_IMAGE}
+            alt="Genelo AI official logo"
+            width={400}
+            height={400}
+            className="w-full rounded-2xl border border-border bg-background object-contain p-6 shadow-sm"
+            loading="lazy"
           />
         </div>
         <p>
