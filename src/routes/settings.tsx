@@ -21,18 +21,27 @@ import {
   Crown,
   User as UserIcon,
   Camera,
-  Sparkles,
   Save,
   Lock,
 } from "lucide-react";
+import logoAsset from "@/assets/genelo-ai-logo.png.asset.json";
 import { toast, Toaster } from "sonner";
+
+const SITE_ORIGIN = "https://geneloai.lovable.app";
+const LOGO_IMAGE = `${SITE_ORIGIN}${logoAsset.url}`;
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
     meta: [
       { title: "Settings — Genelo AI" },
       { name: "description", content: "Manage your Genelo AI profile, theme, AI model, chat history and more." },
+      { property: "og:title", content: "Settings — Genelo AI" },
+      { property: "og:description", content: "Manage your Genelo AI profile, theme, AI model, chat history and more." },
+      { property: "og:url", content: `${SITE_ORIGIN}/settings` },
+      { property: "og:image", content: LOGO_IMAGE },
+      { name: "twitter:image", content: LOGO_IMAGE },
     ],
+    links: [{ rel: "canonical", href: `${SITE_ORIGIN}/settings` }],
   }),
   component: SettingsPage,
 });
