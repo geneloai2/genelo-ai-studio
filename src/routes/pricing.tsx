@@ -6,8 +6,11 @@ import { MODES } from "@/lib/modes";
 import { startProCheckout } from "@/lib/flutterwave.functions";
 import { startZenoPayCheckout } from "@/lib/zenopay.functions";
 import { AdSenseUnit } from "@/components/AdSense";
+import logoAsset from "@/assets/genelo-ai-logo.png.asset.json";
 import { toast } from "sonner";
 
+const SITE_ORIGIN = "https://geneloai.lovable.app";
+const LOGO_IMAGE = `${SITE_ORIGIN}${logoAsset.url}`;
 const AD_SLOT = import.meta.env.VITE_ADSENSE_SLOT_ID as string | undefined;
 
 export const Route = createFileRoute("/pricing")({
@@ -15,7 +18,13 @@ export const Route = createFileRoute("/pricing")({
     meta: [
       { title: "Pricing — Genelo AI" },
       { name: "description", content: "Genelo AI plans. Free with daily limits or Pro for TSh 1,200 / month." },
+      { property: "og:title", content: "Pricing — Genelo AI" },
+      { property: "og:description", content: "Genelo AI plans. Free with daily limits or Pro for TSh 1,200 / month." },
+      { property: "og:url", content: `${SITE_ORIGIN}/pricing` },
+      { property: "og:image", content: LOGO_IMAGE },
+      { name: "twitter:image", content: LOGO_IMAGE },
     ],
+    links: [{ rel: "canonical", href: `${SITE_ORIGIN}/pricing` }],
   }),
   component: PricingPage,
 });
@@ -68,9 +77,14 @@ function PricingPage() {
       <header className="border-b border-border">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
           <Link to="/" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground text-background">
-              <Sparkles className="h-4 w-4" />
-            </div>
+            <img
+              src={LOGO_IMAGE}
+              alt="Genelo AI"
+              width={32}
+              height={32}
+              className="h-8 w-8 rounded-lg border border-border bg-background object-contain p-0.5"
+              loading="eager"
+            />
             <span className="font-semibold">Genelo AI</span>
           </Link>
           <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">

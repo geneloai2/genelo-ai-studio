@@ -1,6 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import founderAsset from "@/assets/founder-genelo.jpg.asset.json";
+import logoAsset from "@/assets/genelo-ai-logo.png.asset.json";
 import { AdSenseUnit } from "@/components/AdSense";
 
+const SITE_ORIGIN = "https://geneloai.lovable.app";
+const FOUNDER_IMAGE = `${SITE_ORIGIN}${founderAsset.url}`;
+const LOGO_IMAGE = `${SITE_ORIGIN}${logoAsset.url}`;
 const CONTACT_EMAIL = "support@geneloai.com";
 const CONTACT_PHONE = "+255621673848";
 const SOCIAL = {
@@ -33,9 +38,11 @@ export const Route = createFileRoute("/contact")({
           "Reach Genelo AI and founder Genelo Moses Mwazembe by email, phone or post in Tanzania.",
       },
       { property: "og:type", content: "website" },
-      { property: "og:url", content: "https://geneloai.lovable.app/contact" },
+      { property: "og:url", content: `${SITE_ORIGIN}/contact` },
+      { property: "og:image", content: FOUNDER_IMAGE },
+      { name: "twitter:image", content: FOUNDER_IMAGE },
     ],
-    links: [{ rel: "canonical", href: "https://geneloai.lovable.app/contact" }],
+    links: [{ rel: "canonical", href: `${SITE_ORIGIN}/contact` }],
     scripts: [
       {
         type: "application/ld+json",
@@ -43,16 +50,18 @@ export const Route = createFileRoute("/contact")({
           "@context": "https://schema.org",
           "@type": "ContactPage",
           name: "Contact Genelo AI",
-          url: "https://geneloai.lovable.app/contact",
+          url: `${SITE_ORIGIN}/contact`,
           mainEntity: {
             "@type": "Organization",
             name: "Genelo AI",
-            url: "https://geneloai.lovable.app",
+            url: SITE_ORIGIN,
+            logo: LOGO_IMAGE,
+            image: [LOGO_IMAGE, FOUNDER_IMAGE],
             founder: {
               "@type": "Person",
               name: "Genelo Moses Mwazembe",
-              url: "https://geneloai.lovable.app/about",
-              image: "https://geneloai.lovable.app/founder-genelo.jpg",
+              url: `${SITE_ORIGIN}/about`,
+              image: FOUNDER_IMAGE,
             },
             contactPoint: [
               {
@@ -87,10 +96,42 @@ function ContactPage() {
         <Link to="/" className="text-primary hover:underline">← Back to Genelo AI</Link>
       </nav>
       <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1 className="text-4xl font-bold tracking-tight">Contact Genelo AI</h1>
+        <div className="mb-6 flex items-center gap-3">
+          <img
+            src={LOGO_IMAGE}
+            alt="Genelo AI logo"
+            width={56}
+            height={56}
+            className="rounded-xl border border-border bg-background object-contain p-1 shadow-sm"
+            loading="eager"
+          />
+          <div>
+            <h1 className="m-0 text-4xl font-bold tracking-tight">Contact Genelo AI</h1>
+            <p className="m-0 mt-1 text-sm text-muted-foreground">Founder & support in Tanzania</p>
+          </div>
+        </div>
         <p className="mt-4 text-lg text-muted-foreground">
           Reach the founder, Genelo Moses Mwazembe, or the Genelo AI support team.
         </p>
+
+        <div className="my-6 grid gap-4 sm:grid-cols-2">
+          <img
+            src={FOUNDER_IMAGE}
+            alt="Genelo Moses Mwazembe — founder of Genelo AI"
+            width={400}
+            height={400}
+            className="w-full rounded-2xl border border-border object-cover shadow-sm"
+            loading="eager"
+          />
+          <img
+            src={LOGO_IMAGE}
+            alt="Genelo AI official logo"
+            width={400}
+            height={400}
+            className="w-full rounded-2xl border border-border bg-background object-contain p-6 shadow-sm"
+            loading="lazy"
+          />
+        </div>
 
         <AdSenseUnit slot={AD_SLOT} format="auto" />
 

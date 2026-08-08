@@ -7,6 +7,7 @@ import { Markdown } from "@/components/Markdown";
 import { chatWithGenelo, generateImage, getProfile } from "@/lib/genelo.functions";
 import { checkAdmin } from "@/lib/admin.functions";
 import { saveChat, getChat, listChats, deleteChat } from "@/lib/chats.functions";
+import logoAsset from "@/assets/genelo-ai-logo.png.asset.json";
 import {
   Sparkles,
   Send,
@@ -34,6 +35,7 @@ import { toast, Toaster } from "sonner";
 
 const APK_DOWNLOAD_URL =
   "https://drive.google.com/uc?export=download&id=1PHL7ek6zEwz0rY21PfztwdI1IRGpBTfW";
+const LOGO_URL = logoAsset.url;
 
 function isNativeApp(): boolean {
   if (typeof window === "undefined") return false;
@@ -374,9 +376,14 @@ function HomePage() {
       >
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-foreground text-background">
-              <Sparkles className="h-4 w-4" />
-            </div>
+            <img
+              src={LOGO_URL}
+              alt="Genelo AI"
+              width={28}
+              height={28}
+              className="h-7 w-7 rounded-md border border-border bg-background object-contain p-0.5"
+              loading="eager"
+            />
             <span className="text-sm font-semibold">Chat history</span>
           </div>
           <button
@@ -450,9 +457,14 @@ function HomePage() {
               <Menu className="h-5 w-5" />
             </button>
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground text-background">
-                <Sparkles className="h-4 w-4" />
-              </div>
+              <img
+                src={LOGO_URL}
+                alt="Genelo AI"
+                width={32}
+                height={32}
+                className="h-8 w-8 rounded-lg border border-border bg-background object-contain p-0.5"
+                loading="eager"
+              />
               <div>
                 <div className="text-sm font-semibold leading-tight">Genelo AI</div>
                 <div className="text-[11px] text-muted-foreground">{currentMode.name}</div>
@@ -799,9 +811,14 @@ function Welcome({ name, onPick }: { name: string; onPick: (text: string) => voi
   const capitalized = name.charAt(0).toUpperCase() + name.slice(1);
   return (
     <div className="mx-auto max-w-2xl pt-12 text-center">
-      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-foreground text-background">
-        <Sparkles className="h-6 w-6" />
-      </div>
+      <img
+        src={LOGO_URL}
+        alt="Genelo AI"
+        width={56}
+        height={56}
+        className="mx-auto h-14 w-14 rounded-2xl border border-border bg-background object-contain p-1"
+        loading="eager"
+      />
       <h1 className="mt-6 text-3xl font-semibold tracking-tight">
         Welcome back, {capitalized} 👋
       </h1>

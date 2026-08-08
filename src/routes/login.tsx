@@ -2,15 +2,25 @@ import { useState } from "react";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
-import { Sparkles, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import logoAsset from "@/assets/genelo-ai-logo.png.asset.json";
 import { toast, Toaster } from "sonner";
+
+const SITE_ORIGIN = "https://geneloai.lovable.app";
+const LOGO_IMAGE = `${SITE_ORIGIN}${logoAsset.url}`;
 
 export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
       { title: "Sign in — Genelo AI" },
       { name: "description", content: "Sign in to Genelo AI to start coding, researching and creating." },
+      { property: "og:title", content: "Sign in — Genelo AI" },
+      { property: "og:description", content: "Sign in to Genelo AI to start coding, researching and creating." },
+      { property: "og:url", content: `${SITE_ORIGIN}/login` },
+      { property: "og:image", content: LOGO_IMAGE },
+      { name: "twitter:image", content: LOGO_IMAGE },
     ],
+    links: [{ rel: "canonical", href: `${SITE_ORIGIN}/login` }],
   }),
   component: LoginPage,
 });
@@ -66,9 +76,14 @@ function LoginPage() {
       <Toaster richColors position="top-center" />
       <div className="w-full max-w-sm">
         <Link to="/" className="mb-8 flex items-center justify-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-foreground text-background">
-            <Sparkles className="h-4 w-4" />
-          </div>
+          <img
+            src={LOGO_IMAGE}
+            alt="Genelo AI"
+            width={36}
+            height={36}
+            className="h-9 w-9 rounded-xl border border-border bg-background object-contain p-0.5"
+            loading="eager"
+          />
           <span className="text-lg font-semibold tracking-tight">Genelo AI</span>
         </Link>
 

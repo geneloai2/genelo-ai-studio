@@ -1,6 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AdSenseUnit } from "@/components/AdSense";
+import logoAsset from "@/assets/genelo-ai-logo.png.asset.json";
 
+const SITE_ORIGIN = "https://geneloai.lovable.app";
+const LOGO_IMAGE = `${SITE_ORIGIN}${logoAsset.url}`;
 const AD_SLOT = import.meta.env.VITE_ADSENSE_SLOT_ID as string | undefined;
 
 export const Route = createFileRoute("/docs")({
@@ -17,9 +20,11 @@ export const Route = createFileRoute("/docs")({
         property: "og:description",
         content: "Guides and references for using Genelo AI by Genelo Moses Mwazembe.",
       },
-      { property: "og:url", content: "https://geneloai.lovable.app/docs" },
+      { property: "og:url", content: `${SITE_ORIGIN}/docs` },
+      { property: "og:image", content: LOGO_IMAGE },
+      { name: "twitter:image", content: LOGO_IMAGE },
     ],
-    links: [{ rel: "canonical", href: "https://geneloai.lovable.app/docs" }],
+    links: [{ rel: "canonical", href: `${SITE_ORIGIN}/docs` }],
   }),
   component: DocsPage,
 });
@@ -30,10 +35,20 @@ function DocsPage() {
       <nav className="mb-8 text-sm">
         <Link to="/" className="text-primary hover:underline">← Back to Genelo AI</Link>
       </nav>
-      <h1 className="text-4xl font-bold tracking-tight">Documentation</h1>
-      <p className="mt-3 text-muted-foreground">
-        Everything you need to know to use Genelo AI effectively.
-      </p>
+      <div className="mb-6 flex items-center gap-3">
+        <img
+          src={LOGO_IMAGE}
+          alt="Genelo AI logo"
+          width={56}
+          height={56}
+          className="rounded-xl border border-border bg-background object-contain p-1 shadow-sm"
+          loading="eager"
+        />
+        <div>
+          <h1 className="m-0 text-4xl font-bold tracking-tight">Documentation</h1>
+          <p className="m-0 mt-1 text-sm text-muted-foreground">Everything you need to know</p>
+        </div>
+      </div>
 
       <AdSenseUnit slot={AD_SLOT} format="auto" />
 

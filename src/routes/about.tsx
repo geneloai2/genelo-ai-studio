@@ -1,9 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import founderAsset from "@/assets/founder-genelo.jpg.asset.json";
+import logoAsset from "@/assets/genelo-ai-logo.png.asset.json";
 import { AdSenseUnit } from "@/components/AdSense";
 import { Download } from "lucide-react";
 
-const FOUNDER_IMAGE = `https://geneloai.lovable.app${founderAsset.url}`;
+const SITE_ORIGIN = "https://geneloai.lovable.app";
+const FOUNDER_IMAGE = `${SITE_ORIGIN}${founderAsset.url}`;
+const LOGO_IMAGE = `${SITE_ORIGIN}${logoAsset.url}`;
 const APK_DOWNLOAD_URL =
   "https://drive.google.com/uc?export=download&id=1PHL7ek6zEwz0rY21PfztwdI1IRGpBTfW";
 const AD_SLOT = import.meta.env.VITE_ADSENSE_SLOT_ID as string | undefined;
@@ -26,11 +29,11 @@ export const Route = createFileRoute("/about")({
           "The story of Genelo AI and its founder Genelo Moses Mwazembe from Songwe, Tanzania.",
       },
       { property: "og:type", content: "profile" },
-      { property: "og:url", content: "https://geneloai.lovable.app/about" },
+      { property: "og:url", content: `${SITE_ORIGIN}/about` },
       { property: "og:image", content: FOUNDER_IMAGE },
       { name: "twitter:image", content: FOUNDER_IMAGE },
     ],
-    links: [{ rel: "canonical", href: "https://geneloai.lovable.app/about" }],
+    links: [{ rel: "canonical", href: `${SITE_ORIGIN}/about` }],
     scripts: [
       {
         type: "application/ld+json",
@@ -127,7 +130,20 @@ function AboutPage() {
         <Link to="/" className="text-primary hover:underline">← Back to Genelo AI</Link>
       </nav>
       <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1 className="text-4xl font-bold tracking-tight">About Genelo AI</h1>
+        <div className="mb-8 flex items-center gap-3">
+          <img
+            src={LOGO_IMAGE}
+            alt="Genelo AI logo"
+            width={56}
+            height={56}
+            className="rounded-xl border border-border bg-background object-contain p-1 shadow-sm"
+            loading="eager"
+          />
+          <div>
+            <h1 className="m-0 text-4xl font-bold tracking-tight">About Genelo AI</h1>
+            <p className="m-0 mt-1 text-sm text-muted-foreground">Founded & built in Tanzania</p>
+          </div>
+        </div>
         <p className="mt-4 text-lg text-muted-foreground">
           Genelo AI is an AI assistant for coding, research, image generation
           and everyday questions — founded and built by{" "}
@@ -135,14 +151,22 @@ function AboutPage() {
         </p>
 
         <h2 className="mt-10 text-2xl font-semibold">Who is Genelo Moses Mwazembe?</h2>
-        <div className="my-6 flex justify-center">
+        <div className="my-6 grid gap-4 sm:grid-cols-2">
           <img
             src={FOUNDER_IMAGE}
             alt="Genelo Moses Mwazembe — founder and owner of Genelo AI"
             width={400}
             height={400}
-            className="rounded-2xl border border-border object-cover shadow-sm"
+            className="w-full rounded-2xl border border-border object-cover shadow-sm"
             loading="eager"
+          />
+          <img
+            src={LOGO_IMAGE}
+            alt="Genelo AI official logo"
+            width={400}
+            height={400}
+            className="w-full rounded-2xl border border-border bg-background object-contain p-6 shadow-sm"
+            loading="lazy"
           />
         </div>
         <p>

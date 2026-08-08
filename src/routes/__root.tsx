@@ -67,6 +67,10 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
+const SITE_ORIGIN = "https://geneloai.lovable.app";
+const LOGO_URL = `${SITE_ORIGIN}/__l5e/assets-v1/512f2ff0-4b6c-4390-a227-62008c6d6c8d/genelo-ai-logo.png`;
+const FOUNDER_IMAGE = `${SITE_ORIGIN}/__l5e/assets-v1/759dc716-23f0-421c-b9c6-a3ab90a11176/founder-genelo.jpg`;
+
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
     meta: [
@@ -78,12 +82,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:title", content: "Genelo AI — Code, research, images & answers" },
       { property: "og:description", content: "Genelo AI: a professional AI for front-end coding in any language, research, teaching, image generation, Q&A and calculations." },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
+      { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@Lovable" },
       { name: "twitter:title", content: "Genelo AI — Code, research, images & answers" },
       { name: "twitter:description", content: "Genelo AI: a professional AI for front-end coding in any language, research, teaching, image generation, Q&A and calculations." },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/e9a8aca5-428f-4bab-a058-c911e0b5d150" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/e9a8aca5-428f-4bab-a058-c911e0b5d150" },
+      { property: "og:image", content: LOGO_URL },
+      { name: "twitter:image", content: LOGO_URL },
       { name: "google-site-verification", content: "6_JheUIra4dgwC_ct71XoTH6yEGxjizhqaMzrLDn8M4" },
       { name: "yandex-verification", content: "f24238a44a12a0ac" },
     ],
@@ -92,6 +96,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
+      { rel: "icon", type: "image/png", href: "/favicon.png" },
     ],
     scripts: [
       {
@@ -105,13 +110,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "@context": "https://schema.org",
           "@type": "Organization",
           name: "Genelo AI",
-          url: "https://geneloai.lovable.app",
-          logo: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/e9a8aca5-428f-4bab-a058-c911e0b5d150",
+          url: SITE_ORIGIN,
+          logo: LOGO_URL,
+          image: [LOGO_URL, FOUNDER_IMAGE],
           founder: {
             "@type": "Person",
             name: "Genelo Moses Mwazembe",
-            url: "https://geneloai.lovable.app/about",
-            image: "https://geneloai.lovable.app/__l5e/assets-v1/759dc716-23f0-421c-b9c6-a3ab90a11176/founder-genelo.jpg",
+            url: `${SITE_ORIGIN}/about`,
+            image: FOUNDER_IMAGE,
           },
           contactPoint: [
             {
