@@ -7,6 +7,7 @@ import { Markdown } from "@/components/Markdown";
 import { chatWithGenelo, generateImage, getProfile } from "@/lib/genelo.functions";
 import { checkAdmin } from "@/lib/admin.functions";
 import { saveChat, getChat, listChats, deleteChat } from "@/lib/chats.functions";
+import logoAsset from "@/assets/genelo-ai-logo.png.asset.json";
 import {
   Sparkles,
   Send,
@@ -34,6 +35,7 @@ import { toast, Toaster } from "sonner";
 
 const APK_DOWNLOAD_URL =
   "https://drive.google.com/uc?export=download&id=1PHL7ek6zEwz0rY21PfztwdI1IRGpBTfW";
+const LOGO_URL = logoAsset.url;
 
 function isNativeApp(): boolean {
   if (typeof window === "undefined") return false;
