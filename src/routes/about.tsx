@@ -1,9 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import founderAsset from "@/assets/founder-genelo.jpg.asset.json";
+import logoAsset from "@/assets/genelo-ai-logo.png.asset.json";
 import { AdSenseUnit } from "@/components/AdSense";
 import { Download } from "lucide-react";
 
-const FOUNDER_IMAGE = `https://geneloai.lovable.app${founderAsset.url}`;
+const SITE_ORIGIN = "https://geneloai.lovable.app";
+const FOUNDER_IMAGE = `${SITE_ORIGIN}${founderAsset.url}`;
+const LOGO_IMAGE = `${SITE_ORIGIN}${logoAsset.url}`;
 const APK_DOWNLOAD_URL =
   "https://drive.google.com/uc?export=download&id=1PHL7ek6zEwz0rY21PfztwdI1IRGpBTfW";
 const AD_SLOT = import.meta.env.VITE_ADSENSE_SLOT_ID as string | undefined;
@@ -26,11 +29,11 @@ export const Route = createFileRoute("/about")({
           "The story of Genelo AI and its founder Genelo Moses Mwazembe from Songwe, Tanzania.",
       },
       { property: "og:type", content: "profile" },
-      { property: "og:url", content: "https://geneloai.lovable.app/about" },
+      { property: "og:url", content: `${SITE_ORIGIN}/about` },
       { property: "og:image", content: FOUNDER_IMAGE },
       { name: "twitter:image", content: FOUNDER_IMAGE },
     ],
-    links: [{ rel: "canonical", href: "https://geneloai.lovable.app/about" }],
+    links: [{ rel: "canonical", href: `${SITE_ORIGIN}/about` }],
     scripts: [
       {
         type: "application/ld+json",
