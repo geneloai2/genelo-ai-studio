@@ -811,9 +811,14 @@ function Welcome({ name, onPick }: { name: string; onPick: (text: string) => voi
   const capitalized = name.charAt(0).toUpperCase() + name.slice(1);
   return (
     <div className="mx-auto max-w-2xl pt-12 text-center">
-      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-foreground text-background">
-        <Sparkles className="h-6 w-6" />
-      </div>
+      <img
+        src={LOGO_URL}
+        alt="Genelo AI"
+        width={56}
+        height={56}
+        className="mx-auto h-14 w-14 rounded-2xl border border-border bg-background object-contain p-1"
+        loading="eager"
+      />
       <h1 className="mt-6 text-3xl font-semibold tracking-tight">
         Welcome back, {capitalized} 👋
       </h1>
