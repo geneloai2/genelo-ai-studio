@@ -452,9 +452,14 @@ function HomePage() {
               <Menu className="h-5 w-5" />
             </button>
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground text-background">
-                <Sparkles className="h-4 w-4" />
-              </div>
+              <img
+                src={LOGO_URL}
+                alt="Genelo AI"
+                width={32}
+                height={32}
+                className="h-8 w-8 rounded-lg border border-border bg-background object-contain p-0.5"
+                loading="eager"
+              />
               <div>
                 <div className="text-sm font-semibold leading-tight">Genelo AI</div>
                 <div className="text-[11px] text-muted-foreground">{currentMode.name}</div>
