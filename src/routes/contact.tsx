@@ -96,10 +96,42 @@ function ContactPage() {
         <Link to="/" className="text-primary hover:underline">← Back to Genelo AI</Link>
       </nav>
       <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1 className="text-4xl font-bold tracking-tight">Contact Genelo AI</h1>
+        <div className="mb-6 flex items-center gap-3">
+          <img
+            src={LOGO_IMAGE}
+            alt="Genelo AI logo"
+            width={56}
+            height={56}
+            className="rounded-xl border border-border bg-background object-contain p-1 shadow-sm"
+            loading="eager"
+          />
+          <div>
+            <h1 className="m-0 text-4xl font-bold tracking-tight">Contact Genelo AI</h1>
+            <p className="m-0 mt-1 text-sm text-muted-foreground">Founder & support in Tanzania</p>
+          </div>
+        </div>
         <p className="mt-4 text-lg text-muted-foreground">
           Reach the founder, Genelo Moses Mwazembe, or the Genelo AI support team.
         </p>
+
+        <div className="my-6 grid gap-4 sm:grid-cols-2">
+          <img
+            src={FOUNDER_IMAGE}
+            alt="Genelo Moses Mwazembe — founder of Genelo AI"
+            width={400}
+            height={400}
+            className="w-full rounded-2xl border border-border object-cover shadow-sm"
+            loading="eager"
+          />
+          <img
+            src={LOGO_IMAGE}
+            alt="Genelo AI official logo"
+            width={400}
+            height={400}
+            className="w-full rounded-2xl border border-border bg-background object-contain p-6 shadow-sm"
+            loading="lazy"
+          />
+        </div>
 
         <AdSenseUnit slot={AD_SLOT} format="auto" />
 
