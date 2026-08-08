@@ -21,6 +21,7 @@ import {
   Crown,
   User as UserIcon,
   Camera,
+  Sparkles,
   Save,
   Lock,
 } from "lucide-react";
