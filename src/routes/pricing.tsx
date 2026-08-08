@@ -6,8 +6,11 @@ import { MODES } from "@/lib/modes";
 import { startProCheckout } from "@/lib/flutterwave.functions";
 import { startZenoPayCheckout } from "@/lib/zenopay.functions";
 import { AdSenseUnit } from "@/components/AdSense";
+import logoAsset from "@/assets/genelo-ai-logo.png.asset.json";
 import { toast } from "sonner";
 
+const SITE_ORIGIN = "https://geneloai.lovable.app";
+const LOGO_IMAGE = `${SITE_ORIGIN}${logoAsset.url}`;
 const AD_SLOT = import.meta.env.VITE_ADSENSE_SLOT_ID as string | undefined;
 
 export const Route = createFileRoute("/pricing")({
@@ -15,7 +18,13 @@ export const Route = createFileRoute("/pricing")({
     meta: [
       { title: "Pricing — Genelo AI" },
       { name: "description", content: "Genelo AI plans. Free with daily limits or Pro for TSh 1,200 / month." },
+      { property: "og:title", content: "Pricing — Genelo AI" },
+      { property: "og:description", content: "Genelo AI plans. Free with daily limits or Pro for TSh 1,200 / month." },
+      { property: "og:url", content: `${SITE_ORIGIN}/pricing` },
+      { property: "og:image", content: LOGO_IMAGE },
+      { name: "twitter:image", content: LOGO_IMAGE },
     ],
+    links: [{ rel: "canonical", href: `${SITE_ORIGIN}/pricing` }],
   }),
   component: PricingPage,
 });

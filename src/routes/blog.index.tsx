@@ -1,6 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AdSenseUnit } from "@/components/AdSense";
+import logoAsset from "@/assets/genelo-ai-logo.png.asset.json";
 
+const SITE_ORIGIN = "https://geneloai.lovable.app";
+const LOGO_IMAGE = `${SITE_ORIGIN}${logoAsset.url}`;
 const AD_SLOT = import.meta.env.VITE_ADSENSE_SLOT_ID as string | undefined;
 
 const posts = [

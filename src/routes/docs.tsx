@@ -1,6 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AdSenseUnit } from "@/components/AdSense";
+import logoAsset from "@/assets/genelo-ai-logo.png.asset.json";
 
+const SITE_ORIGIN = "https://geneloai.lovable.app";
+const LOGO_IMAGE = `${SITE_ORIGIN}${logoAsset.url}`;
 const AD_SLOT = import.meta.env.VITE_ADSENSE_SLOT_ID as string | undefined;
 
 export const Route = createFileRoute("/docs")({
@@ -17,9 +20,11 @@ export const Route = createFileRoute("/docs")({
         property: "og:description",
         content: "Guides and references for using Genelo AI by Genelo Moses Mwazembe.",
       },
-      { property: "og:url", content: "https://geneloai.lovable.app/docs" },
+      { property: "og:url", content: `${SITE_ORIGIN}/docs` },
+      { property: "og:image", content: LOGO_IMAGE },
+      { name: "twitter:image", content: LOGO_IMAGE },
     ],
-    links: [{ rel: "canonical", href: "https://geneloai.lovable.app/docs" }],
+    links: [{ rel: "canonical", href: `${SITE_ORIGIN}/docs` }],
   }),
   component: DocsPage,
 });
