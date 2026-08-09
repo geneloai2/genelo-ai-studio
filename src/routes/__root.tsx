@@ -68,8 +68,8 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 }
 
 const SITE_ORIGIN = "https://geneloai.lovable.app";
-const LOGO_URL = `${SITE_ORIGIN}/__l5e/assets-v1/512f2ff0-4b6c-4390-a227-62008c6d6c8d/genelo-ai-logo.png`;
-const FOUNDER_IMAGE = `${SITE_ORIGIN}/__l5e/assets-v1/759dc716-23f0-421c-b9c6-a3ab90a11176/founder-genelo.jpg`;
+const LOGO_URL = `${SITE_ORIGIN}/__l5e/assets-v1/58bc58ab-531e-4d14-a4e2-3e32bd0d067c/genelo-ai-logo-v2.png`;
+const FOUNDER_IMAGE = `${SITE_ORIGIN}/__l5e/assets-v1/68d35b19-9dec-4b11-b4bd-3d2f1dbda74f/founder-genelo-2.jpg`;
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
