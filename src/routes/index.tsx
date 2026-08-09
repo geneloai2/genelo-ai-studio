@@ -379,9 +379,9 @@ function HomePage() {
             <img
               src={LOGO_URL}
               alt="Genelo AI"
-              width={28}
+              width={36}
               height={28}
-              className="h-7 w-7 rounded-md border border-border bg-background object-contain p-0.5"
+              className="h-7 w-9 rounded-md border-2 border-foreground/80 bg-background object-contain p-0.5 shadow-sm"
               loading="eager"
             />
             <span className="text-sm font-semibold">Chat history</span>
@@ -460,9 +460,9 @@ function HomePage() {
               <img
                 src={LOGO_URL}
                 alt="Genelo AI"
-                width={32}
-                height={32}
-                className="h-8 w-8 rounded-lg border border-border bg-background object-contain p-0.5"
+                width={44}
+                height={36}
+                className="h-9 w-11 rounded-lg border-2 border-foreground/80 bg-background object-contain p-0.5 shadow-sm"
                 loading="eager"
               />
               <div>
@@ -814,9 +814,9 @@ function Welcome({ name, onPick }: { name: string; onPick: (text: string) => voi
       <img
         src={LOGO_URL}
         alt="Genelo AI"
-        width={56}
+        width={72}
         height={56}
-        className="mx-auto h-14 w-14 rounded-2xl border border-border bg-background object-contain p-1"
+        className="mx-auto h-14 w-[4.5rem] rounded-2xl border-2 border-foreground/80 bg-background object-contain p-1 shadow-sm"
         loading="eager"
       />
       <h1 className="mt-6 text-3xl font-semibold tracking-tight">
