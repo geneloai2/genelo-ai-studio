@@ -189,33 +189,113 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
     const key = process.env.LOVABLE_API_KEY;
     if (!key) return { ok: false as const, error: "AI not configured." };
 
-    const resp = await fetch(AI_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
+    const tools = [
+      {
+        type: "function",
+        function: {
+          name: "search_web",
+          description:
+            "Search the public web for pages and PDF documents (university almanacs, NECTA circulars, government reports, papers).",
+          parameters: {
+            type: "object",
+            properties: {
+              query: { type: "string", description: "Search query" },
+              pdfOnly: { type: "boolean", description: "Restrict results to PDF documents" },
+            },
+            required: ["query"],
+            additionalProperties: false,
+          },
+        },
       },
-      body: JSON.stringify({
-        model: mode.model,
-        messages: [{ role: "system", content: systemPrompt }, ...data.messages],
-      }),
-    });
+      {
+        type: "function",
+        function: {
+          name: "fetch_document",
+          description:
+            "Open a public http(s) URL and read its text content. Extracts real text from PDFs as well as web pages.",
+          parameters: {
+            type: "object",
+            properties: { url: { type: "string", description: "Absolute URL to read" } },
+            required: ["url"],
+            additionalProperties: false,
+          },
+        },
+      },
+    ];
 
-    if (resp.status === 429)
-      return { ok: false as const, error: "Rate limit hit, please slow down." };
-    if (resp.status === 402)
-      return {
-        ok: false as const,
-        error: "AI credits exhausted. Please add credits in workspace settings.",
-      };
-    if (!resp.ok) {
-      const t = await resp.text();
-      console.error("AI error", resp.status, t);
-      return { ok: false as const, error: "AI request failed." };
+    const convo: Array<Record<string, unknown>> = [
+      { role: "system", content: systemPrompt },
+      ...data.messages,
+    ];
+
+    for (let step = 0; step < 4; step++) {
+      const resp = await fetch(AI_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ model: mode.model, messages: convo, tools }),
+      });
+
+      if (resp.status === 429)
+        return { ok: false as const, error: "Rate limit hit, please slow down." };
+      if (resp.status === 402)
+        return {
+          ok: false as const,
+          error: "AI credits exhausted. Please add credits in workspace settings.",
+        };
+      if (!resp.ok) {
+        const t = await resp.text();
+        console.error("AI error", resp.status, t);
+        return { ok: false as const, error: "AI request failed." };
+      }
+
+      const j = await resp.json();
+      const msg = j.choices?.[0]?.message;
+      const calls = msg?.tool_calls as
+        | Array<{ id: string; function: { name: string; arguments: string } }>
+        | undefined;
+
+      if (!calls?.length) {
+        return { ok: true as const, content: (msg?.content as string) ?? "" };
+      }
+
+      convo.push(msg);
+      const { searchWeb, fetchDocument } = await import("./web-tools.server");
+      const results = await Promise.all(
+        calls.slice(0, 4).map(async (c) => {
+          let args: { query?: string; pdfOnly?: boolean; url?: string } = {};
+          try {
+            args = JSON.parse(c.function.arguments || "{}");
+          } catch {
+            /* ignore */
+          }
+          try {
+            if (c.function.name === "search_web" && args.query)
+              return { id: c.id, out: await searchWeb(args.query, { pdfOnly: !!args.pdfOnly }) };
+            if (c.function.name === "fetch_document" && args.url)
+              return { id: c.id, out: await fetchDocument(args.url) };
+          } catch (e) {
+            return { id: c.id, out: { ok: false, error: (e as Error).message } };
+          }
+          return { id: c.id, out: { ok: false, error: "Bad tool arguments." } };
+        }),
+      );
+      for (const r of results) {
+        convo.push({
+          role: "tool",
+          tool_call_id: r.id,
+          content: JSON.stringify(r.out).slice(0, 40000),
+        });
+      }
     }
-    const j = await resp.json();
-    const content: string = j.choices?.[0]?.message?.content ?? "";
-    return { ok: true as const, content };
+
+    return {
+      ok: false as const,
+      error: "Research took too many steps. Please rephrase your question.",
+    };
+
   });
 
 const ImageInput = z.object({
