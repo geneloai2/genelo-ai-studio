@@ -98,19 +98,25 @@ export async function searchWeb(query: string, opts?: { pdfOnly?: boolean }) {
     });
     if (!res.ok) return { ok: false as const, error: `Search failed (${res.status}).` };
     const html = await res.text();
+    const strip = (s: string) => s.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
     const results: { title: string; url: string; snippet: string }[] = [];
-    const re =
-      /<a[^>]+class="[^"]*result__a[^"]*"[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>([\s\S]*?)(?=<a[^>]+class="[^"]*result__a|<\/div>\s*<\/div>\s*<\/div>)/gi;
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(html)) && results.length < 8) {
-      let href = m[1];
+    const blocks = html.split(/class="result__a"/i).slice(1);
+    for (const block of blocks) {
+      if (results.length >= 8) break;
+      const hrefM = /href="([^"]+)"/i.exec(block);
+      if (!hrefM) continue;
+      let href = hrefM[1].replace(/&amp;/g, "&");
       const uddg = /uddg=([^&]+)/.exec(href);
       if (uddg) href = decodeURIComponent(uddg[1]);
+      if (href.startsWith("//")) href = `https:${href}`;
       if (!/^https?:\/\//.test(href)) continue;
-      const strip = (s: string) => s.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-      const snip = /class="[^"]*result__snippet[^"]*"[^>]*>([\s\S]*?)<\/a>/i.exec(m[3])?.[1] ?? "";
-      results.push({ title: strip(m[2]), url: href, snippet: strip(snip).slice(0, 300) });
+      const title = strip(/>([\s\S]*?)<\/a>/i.exec(block)?.[1] ?? "");
+      const snip = strip(
+        /class="result__snippet"[^>]*>([\s\S]*?)<\/a>/i.exec(block)?.[1] ?? "",
+      );
+      results.push({ title, url: href, snippet: snip.slice(0, 300) });
     }
+
     if (!results.length) return { ok: false as const, error: "No results found." };
     return { ok: true as const, query: q, results };
   } catch (e) {
