@@ -10,11 +10,14 @@ const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 const SYSTEM = `You are Genelo AI — a warm, friendly and professional assistant built in Tanzania, similar in style to ChatGPT. You help with front-end code (HTML, CSS, JS, TS, React, Vue, Svelte, Python and more), research, teaching, accurate calculations, image ideas and shipping real apps.
 
-ABOUT YOUR ORIGIN (very important — answer naturally and warmly whenever asked "who created you", "who made you", "who owns Genelo AI", "who is your founder", "who is Genelo", or anything similar). When you answer, ALWAYS start your reply with the founder's portrait using this exact markdown line on its own (do not change the URL, do not wrap in code):
+STRICT TOPIC RULE (very important): answer ONLY the user's current question. NEVER mention, introduce or describe your founder, his family, friends, hometown, GNL Technology or your origin story unless the user explicitly asks about who created you / who owns Genelo AI / who Genelo is. For every other question, go straight to the answer with no founder intro and no founder image.
+
+ABOUT YOUR ORIGIN (use this ONLY when the user explicitly asks about your creator/founder/owner — e.g. "who created you", "who made you", "who owns Genelo AI", "who is your founder", "who is Genelo"). In that case ONLY, start your reply with the founder's portrait using this exact markdown line on its own (do not change the URL, do not wrap in code):
 
 ![Genelo Moses Mwazembe — Founder & CEO of GNL Technology](/__l5e/assets-v1/68d35b19-9dec-4b11-b4bd-3d2f1dbda74f/founder-genelo-2.jpg)
 
 Then introduce him using THIS exact structure (keep the emojis, headings and bullets — only adapt tone slightly to match the user's language):
+
 
 👋 Hello, I'm **Genelo Moses Mwazembe**
 
@@ -101,7 +104,13 @@ How to answer EVERY message:
 6. End with a "📚 References" section listing 2–4 trustworthy sources as markdown links in the form \`- [Source name](https://full-url)\`. Use well-known canonical domains only (developer.mozilla.org, react.dev, nodejs.org, tailwindcss.com, supabase.com, web.dev, github.com, wikipedia.org, etc.) — never invent URLs.
 7. Finish with one short follow-up question to keep the conversation going (e.g. "Would you like me to also add dark mode to this?").
 
+RESEARCH TOOLS (you can read the public web and public PDFs):
+- \`search_web\` — search the public web. Set \`pdfOnly: true\` to find PDF documents (university almanacs, NECTA circulars and results, TCU/NACTE guidelines, government reports, syllabi, research papers).
+- \`fetch_document\` — open any public URL and read it. It extracts the real text of PDFs as well as web pages.
+Use these tools whenever the answer depends on facts you are not sure about, on a specific institution's document, on dates/fees/deadlines, on recent events, or when the user gives you a link. Search first, then fetch the 1–3 most relevant documents and answer from their actual content, quoting key figures and stating the document name and date. If a PDF is a scanned image with no text, say so and suggest another source. Never invent contents of a document you did not read, and always list the real URLs you opened under "📚 References".
+
 Remember the full conversation context and continue naturally from previous turns. Never wrap your whole response in a code block. Be concise but generous — quality over filler.`;
+
 
 const ChatInput = z.object({
   modeId: z.string().min(1).max(40),
@@ -180,33 +189,113 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
     const key = process.env.LOVABLE_API_KEY;
     if (!key) return { ok: false as const, error: "AI not configured." };
 
-    const resp = await fetch(AI_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
+    const tools = [
+      {
+        type: "function",
+        function: {
+          name: "search_web",
+          description:
+            "Search the public web for pages and PDF documents (university almanacs, NECTA circulars, government reports, papers).",
+          parameters: {
+            type: "object",
+            properties: {
+              query: { type: "string", description: "Search query" },
+              pdfOnly: { type: "boolean", description: "Restrict results to PDF documents" },
+            },
+            required: ["query"],
+            additionalProperties: false,
+          },
+        },
       },
-      body: JSON.stringify({
-        model: mode.model,
-        messages: [{ role: "system", content: systemPrompt }, ...data.messages],
-      }),
-    });
+      {
+        type: "function",
+        function: {
+          name: "fetch_document",
+          description:
+            "Open a public http(s) URL and read its text content. Extracts real text from PDFs as well as web pages.",
+          parameters: {
+            type: "object",
+            properties: { url: { type: "string", description: "Absolute URL to read" } },
+            required: ["url"],
+            additionalProperties: false,
+          },
+        },
+      },
+    ];
 
-    if (resp.status === 429)
-      return { ok: false as const, error: "Rate limit hit, please slow down." };
-    if (resp.status === 402)
-      return {
-        ok: false as const,
-        error: "AI credits exhausted. Please add credits in workspace settings.",
-      };
-    if (!resp.ok) {
-      const t = await resp.text();
-      console.error("AI error", resp.status, t);
-      return { ok: false as const, error: "AI request failed." };
+    const convo: Array<Record<string, unknown>> = [
+      { role: "system", content: systemPrompt },
+      ...data.messages,
+    ];
+
+    for (let step = 0; step < 4; step++) {
+      const resp = await fetch(AI_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ model: mode.model, messages: convo, tools }),
+      });
+
+      if (resp.status === 429)
+        return { ok: false as const, error: "Rate limit hit, please slow down." };
+      if (resp.status === 402)
+        return {
+          ok: false as const,
+          error: "AI credits exhausted. Please add credits in workspace settings.",
+        };
+      if (!resp.ok) {
+        const t = await resp.text();
+        console.error("AI error", resp.status, t);
+        return { ok: false as const, error: "AI request failed." };
+      }
+
+      const j = await resp.json();
+      const msg = j.choices?.[0]?.message;
+      const calls = msg?.tool_calls as
+        | Array<{ id: string; function: { name: string; arguments: string } }>
+        | undefined;
+
+      if (!calls?.length) {
+        return { ok: true as const, content: (msg?.content as string) ?? "" };
+      }
+
+      convo.push(msg);
+      const { searchWeb, fetchDocument } = await import("./web-tools.server");
+      const results = await Promise.all(
+        calls.slice(0, 4).map(async (c) => {
+          let args: { query?: string; pdfOnly?: boolean; url?: string } = {};
+          try {
+            args = JSON.parse(c.function.arguments || "{}");
+          } catch {
+            /* ignore */
+          }
+          try {
+            if (c.function.name === "search_web" && args.query)
+              return { id: c.id, out: await searchWeb(args.query, { pdfOnly: !!args.pdfOnly }) };
+            if (c.function.name === "fetch_document" && args.url)
+              return { id: c.id, out: await fetchDocument(args.url) };
+          } catch (e) {
+            return { id: c.id, out: { ok: false, error: (e as Error).message } };
+          }
+          return { id: c.id, out: { ok: false, error: "Bad tool arguments." } };
+        }),
+      );
+      for (const r of results) {
+        convo.push({
+          role: "tool",
+          tool_call_id: r.id,
+          content: JSON.stringify(r.out).slice(0, 40000),
+        });
+      }
     }
-    const j = await resp.json();
-    const content: string = j.choices?.[0]?.message?.content ?? "";
-    return { ok: true as const, content };
+
+    return {
+      ok: false as const,
+      error: "Research took too many steps. Please rephrase your question.",
+    };
+
   });
 
 const ImageInput = z.object({
