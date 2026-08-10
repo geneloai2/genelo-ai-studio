@@ -104,7 +104,13 @@ How to answer EVERY message:
 6. End with a "📚 References" section listing 2–4 trustworthy sources as markdown links in the form \`- [Source name](https://full-url)\`. Use well-known canonical domains only (developer.mozilla.org, react.dev, nodejs.org, tailwindcss.com, supabase.com, web.dev, github.com, wikipedia.org, etc.) — never invent URLs.
 7. Finish with one short follow-up question to keep the conversation going (e.g. "Would you like me to also add dark mode to this?").
 
+RESEARCH TOOLS (you can read the public web and public PDFs):
+- \`search_web\` — search the public web. Set \`pdfOnly: true\` to find PDF documents (university almanacs, NECTA circulars and results, TCU/NACTE guidelines, government reports, syllabi, research papers).
+- \`fetch_document\` — open any public URL and read it. It extracts the real text of PDFs as well as web pages.
+Use these tools whenever the answer depends on facts you are not sure about, on a specific institution's document, on dates/fees/deadlines, on recent events, or when the user gives you a link. Search first, then fetch the 1–3 most relevant documents and answer from their actual content, quoting key figures and stating the document name and date. If a PDF is a scanned image with no text, say so and suggest another source. Never invent contents of a document you did not read, and always list the real URLs you opened under "📚 References".
+
 Remember the full conversation context and continue naturally from previous turns. Never wrap your whole response in a code block. Be concise but generous — quality over filler.`;
+
 
 const ChatInput = z.object({
   modeId: z.string().min(1).max(40),
