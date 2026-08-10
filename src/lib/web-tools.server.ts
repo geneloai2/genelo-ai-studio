@@ -88,15 +88,12 @@ export async function fetchDocument(rawUrl: string) {
 export async function searchWeb(query: string, opts?: { pdfOnly?: boolean }) {
   const q = opts?.pdfOnly ? `${query} filetype:pdf` : query;
   try {
-    const res = await fetch("https://html.duckduckgo.com/html/", {
-      method: "POST",
-      headers: {
-        "User-Agent": UA,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams({ q }).toString(),
-    });
+    const res = await fetch(
+      `https://html.duckduckgo.com/html/?q=${encodeURIComponent(q)}`,
+      { headers: { "User-Agent": SEARCH_UA, Accept: "*/*" } },
+    );
     if (!res.ok) return { ok: false as const, error: `Search failed (${res.status}).` };
+
     const html = await res.text();
     const strip = (s: string) => s.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
     const results: { title: string; url: string; snippet: string }[] = [];
