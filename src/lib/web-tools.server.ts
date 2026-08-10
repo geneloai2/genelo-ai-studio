@@ -4,8 +4,8 @@
  * NECTA results/circulars, government and institutional PDFs.
  */
 
-const UA =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+const UA = "Mozilla/5.0 (compatible; GeneloAI/1.0; +https://geneloai.lovable.app)";
+const SEARCH_UA = "Mozilla/5.0";
 
 const MAX_CHARS = 18000;
 
