@@ -431,7 +431,7 @@ export const generateImage = createServerFn({ method: "POST" })
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash-image",
-        messages: [{ role: "user", content: data.prompt }],
+        messages: [{ role: "user", content: brandedImagePrompt(data.prompt) }],
         modalities: ["image", "text"],
       }),
     });
