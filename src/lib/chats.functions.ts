@@ -2,10 +2,19 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+const Attachment = z.object({
+  name: z.string().max(200),
+  mime: z.string().max(120),
+  kind: z.enum(["image", "file"]),
+  dataUrl: z.string().max(600_000).optional(),
+  text: z.string().max(20000).optional(),
+});
+
 const Msg = z.object({
   role: z.enum(["user", "assistant"]),
   content: z.string().max(40000),
   image: z.string().url().optional(),
+  attachments: z.array(Attachment).max(4).optional(),
 });
 
 export const listChats = createServerFn({ method: "POST" })
