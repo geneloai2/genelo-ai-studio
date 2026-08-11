@@ -61,7 +61,7 @@ export const Route = createFileRoute("/")({
   component: HomePage,
 });
 
-type Attachment = { name: string; mime: string; dataUrl: string; kind: "image" | "file"; text?: string };
+type Attachment = { name: string; mime: string; dataUrl?: string; kind: "image" | "file"; text?: string };
 type Msg = { role: "user" | "assistant"; content: string; image?: string; attachments?: Attachment[] };
 type Profile = { plan: string; display_name?: string | null; avatar_url?: string | null; email?: string | null };
 
@@ -228,22 +228,61 @@ function HomePage() {
     });
   }
 
+  /** Downscale images so the upload always fits the AI request limits. */
+  function compressImage(dataUrl: string, max = 1152, quality = 0.8): Promise<string> {
+    return new Promise((res) => {
+      try {
+        const img = new Image();
+        img.onload = () => {
+          const scale = Math.min(1, max / Math.max(img.width, img.height));
+          const w = Math.max(1, Math.round(img.width * scale));
+          const h = Math.max(1, Math.round(img.height * scale));
+          const canvas = document.createElement("canvas");
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return res(dataUrl);
+          ctx.drawImage(img, 0, 0, w, h);
+          res(canvas.toDataURL("image/jpeg", quality));
+        };
+        img.onerror = () => res(dataUrl);
+        img.src = dataUrl;
+      } catch {
+        res(dataUrl);
+      }
+    });
+  }
+
   async function onPickFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
     const next: Attachment[] = [];
     for (const f of Array.from(files).slice(0, 4)) {
-      if (f.size > 8 * 1024 * 1024) {
-        toast.error(`${f.name} is larger than 8MB`);
+      if (f.size > 12 * 1024 * 1024) {
+        toast.error(`${f.name} is larger than 12MB`);
         continue;
       }
       try {
         const isImage = f.type.startsWith("image/");
-        const dataUrl = await readFileAsDataURL(f);
+        let dataUrl = await readFileAsDataURL(f);
         let text: string | undefined;
-        if (!isImage && (f.type.startsWith("text/") || /\.(md|csv|json|js|ts|tsx|jsx|html|css|py)$/i.test(f.name))) {
+        if (isImage) {
+          dataUrl = await compressImage(dataUrl);
+          if (dataUrl.length > 1_800_000) dataUrl = await compressImage(dataUrl, 800, 0.65);
+        } else if (
+          f.type.startsWith("text/") ||
+          /\.(md|txt|csv|json|js|ts|tsx|jsx|html|css|py|java|php|sql|xml|yml|yaml)$/i.test(f.name)
+        ) {
           text = (await readFileAsText(f)).slice(0, 20000);
+        } else if (/\.pdf$/i.test(f.name) || f.type === "application/pdf") {
+          text = undefined;
         }
-        next.push({ name: f.name, mime: f.type || "application/octet-stream", dataUrl, kind: isImage ? "image" : "file", text });
+        next.push({
+          name: f.name,
+          mime: f.type || "application/octet-stream",
+          dataUrl,
+          kind: isImage ? "image" : "file",
+          text,
+        });
       } catch {
         toast.error(`Could not read ${f.name}`);
       }
@@ -251,6 +290,7 @@ function HomePage() {
     setAttachments((a) => [...a, ...next].slice(0, 4));
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
+
 
   async function send(overrideText?: string) {
     const text = (overrideText ?? input).trim();
@@ -288,7 +328,16 @@ function HomePage() {
               .join("");
             parts.push({ type: "text", text: (x.content || "") + fileNotes });
             for (const a of x.attachments) {
-              if (a.kind === "image") parts.push({ type: "image_url", image_url: { url: a.dataUrl } });
+              if (a.kind === "image" && a.dataUrl)
+                parts.push({ type: "image_url", image_url: { url: a.dataUrl } });
+              else if (
+                a.kind === "file" &&
+                !a.text &&
+                a.dataUrl &&
+                (a.mime === "application/pdf" || /\.pdf$/i.test(a.name)) &&
+                a.dataUrl.length < 5_500_000
+              )
+                parts.push({ type: "file", file: { filename: a.name, file_data: a.dataUrl } });
             }
             return { role: x.role, content: parts };
           }
@@ -307,12 +356,28 @@ function HomePage() {
 
       if (!user) return;
       try {
-        // Strip large dataUrls before saving to keep payload small
-        const toSave = finalMessages.map((m) => ({
-          role: m.role,
-          content: m.content,
-          ...(m.image ? { image: m.image } : {}),
-        }));
+        // Keep a small thumbnail of uploads so history shows the attached files.
+        const toSave = await Promise.all(
+          finalMessages.map(async (m) => ({
+            role: m.role,
+            content: m.content,
+            ...(m.image ? { image: m.image } : {}),
+            ...(m.attachments && m.attachments.length
+              ? {
+                  attachments: await Promise.all(
+                    m.attachments.map(async (a) => ({
+                      name: a.name,
+                      mime: a.mime,
+                      kind: a.kind,
+                      ...(a.kind === "image"
+                        ? { dataUrl: await compressImage(a.dataUrl ?? "", 320, 0.6) }
+                        : {}),
+                    })),
+                  ),
+                }
+              : {}),
+          })),
+        );
         const r = await saveFn({
           data: {
             id: chatId,
@@ -551,7 +616,12 @@ function HomePage() {
           ) : (
             <div className="space-y-8">
               {messages.map((m, i) => (
-                <Bubble key={i} msg={m} />
+                <Bubble
+                  key={i}
+                  msg={m}
+                  showSuggestions={!busy && m.role === "assistant" && i === messages.length - 1}
+                  onSuggestion={(t) => send(t)}
+                />
               ))}
               {busy && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -730,17 +800,67 @@ function HomePage() {
   );
 }
 
-function Bubble({ msg }: { msg: Msg }) {
+/** Clipboard that also works inside Android WebView / older mobile browsers. */
+async function copyText(text: string) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    /* fall through */
+  }
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.top = "-1000px";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, ta.value.length);
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
+/** Pull the AI's own follow-up offers out of a reply so they can be tapped. */
+function extractSuggestions(content: string): string[] {
+  const plain = content
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1");
+  const tail = plain.split(/\n/).slice(-8).join("\n");
+  const matches = tail.match(/[^.?!\n]{12,180}\?/g) ?? [];
+  const cleaned = matches
+    .map((s) => s.replace(/^[\s>*\-•#0-9.]+/, "").replace(/\*\*/g, "").trim())
+    .filter((s) => /\b(would|do you|shall|should|want|need|can i|like me|ningependa|unataka|je)\b/i.test(s));
+  return Array.from(new Set(cleaned)).slice(0, 3);
+}
+
+function Bubble({
+  msg,
+  onSuggestion,
+  showSuggestions,
+}: {
+  msg: Msg;
+  onSuggestion?: (text: string) => void;
+  showSuggestions?: boolean;
+}) {
   const isUser = msg.role === "user";
   const [copied, setCopied] = useState(false);
   async function copy() {
-    try {
-      await navigator.clipboard.writeText(msg.content);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      /* ignore */
+    const ok = await copyText(msg.content);
+    if (!ok) {
+      toast.error("Could not copy. Long-press the text to copy manually.");
+      return;
     }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
   }
   if (isUser) {
     return (
@@ -749,7 +869,7 @@ function Bubble({ msg }: { msg: Msg }) {
           {msg.attachments && msg.attachments.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-2">
               {msg.attachments.map((a, i) =>
-                a.kind === "image" ? (
+                a.kind === "image" && a.dataUrl ? (
                   <img key={i} src={a.dataUrl} alt={a.name} className="h-20 w-20 rounded-md object-cover" />
                 ) : (
                   <div key={i} className="flex items-center gap-1 rounded-md bg-background/10 px-2 py-1 text-xs">
@@ -762,7 +882,7 @@ function Bubble({ msg }: { msg: Msg }) {
           <p className="whitespace-pre-wrap pr-6 text-sm">{msg.content}</p>
           <button
             onClick={copy}
-            className="absolute -left-9 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-muted-foreground opacity-0 transition-opacity hover:bg-muted group-hover:opacity-100"
+            className="absolute -left-9 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-muted-foreground transition-opacity hover:bg-muted md:opacity-0 md:group-hover:opacity-100"
             aria-label="Copy your message"
             title="Copy"
           >
@@ -772,6 +892,7 @@ function Bubble({ msg }: { msg: Msg }) {
       </div>
     );
   }
+  const suggestions = showSuggestions ? extractSuggestions(msg.content) : [];
   // Assistant: full-width, no box, ChatGPT-style
   return (
     <div className="group flex gap-3">
@@ -787,7 +908,20 @@ function Bubble({ msg }: { msg: Msg }) {
             className="mt-3 max-h-96 rounded-lg border border-border"
           />
         )}
-        <div className="mt-2 flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+        {suggestions.length > 0 && onSuggestion && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {suggestions.map((s) => (
+              <button
+                key={s}
+                onClick={() => onSuggestion(s.replace(/^"|"$/g, ""))}
+                className="rounded-full border border-border bg-background px-3 py-1.5 text-left text-xs font-medium text-foreground transition-colors hover:bg-accent"
+              >
+                ✨ {s}
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="mt-2 flex items-center gap-2 transition-opacity md:opacity-0 md:group-hover:opacity-100">
           <button
             onClick={copy}
             className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -800,6 +934,7 @@ function Bubble({ msg }: { msg: Msg }) {
     </div>
   );
 }
+
 
 function Welcome({ name, onPick }: { name: string; onPick: (text: string) => void }) {
   const examples = [

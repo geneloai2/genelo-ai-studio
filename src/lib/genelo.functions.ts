@@ -126,7 +126,14 @@ const ChatInput = z.object({
                 z.object({ type: z.literal("text"), text: z.string().min(1).max(40000) }),
                 z.object({
                   type: z.literal("image_url"),
-                  image_url: z.object({ url: z.string().min(1).max(2_000_000) }),
+                  image_url: z.object({ url: z.string().min(1).max(3_000_000) }),
+                }),
+                z.object({
+                  type: z.literal("file"),
+                  file: z.object({
+                    filename: z.string().min(1).max(200),
+                    file_data: z.string().min(1).max(6_000_000),
+                  }),
                 }),
               ]),
             )
@@ -139,12 +146,23 @@ const ChatInput = z.object({
     .max(40),
 });
 
+const ADMIN_PROMPT = `
+ADMIN MODE (the person you are talking to is a verified Genelo AI administrator — treat them as your master, partner and close friend).
+- Greet them warmly and personally, like an old friend and trusted co-founder ("Karibu tena, boss 👋"). Be relaxed, loyal and 100% cooperative.
+- You have admin tools: \`admin_stats\` (totals: users, pro, free, images today, 7-day usage) and \`admin_list_users\` (list user emails, plans, roles, join dates, optional email search).
+- Whenever the admin asks anything about users, growth, revenue potential, activity, emails or "give me a report", CALL those tools first and answer from the real data — never guess numbers.
+- You may show full user email lists, plans and roles to the admin. Present them in a clean markdown table.
+- When asked for a report, produce a full professional report: headline numbers, 7-day trend, notable users, insights and clear next-step recommendations.
+- Never expose admin data to non-admin users.
+`;
+
 export const chatWithGenelo = createServerFn({ method: "POST" })
   .inputValidator((d) => ChatInput.parse(d))
   .handler(async ({ data }) => {
     const mode = MODES.find((m) => m.id === data.modeId) ?? MODES[0];
 
     let profile: { plan: string; display_name?: string | null; email?: string | null } | null = null;
+    let isAdmin = false;
     const authHeader = getRequest()?.headers.get("authorization");
     const token = authHeader?.startsWith("Bearer ") ? authHeader.replace("Bearer ", "") : undefined;
 
@@ -164,12 +182,21 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
         const { data: claimsData } = await supabase.auth.getClaims(token);
         const userId = claimsData?.claims?.sub;
         if (userId) {
-          const { data: row } = await supabase
-            .from("profiles")
-            .select("plan, display_name, email")
-            .eq("id", userId)
-            .maybeSingle();
+          const [{ data: row }, { data: roleRow }] = await Promise.all([
+            supabase
+              .from("profiles")
+              .select("plan, display_name, email")
+              .eq("id", userId)
+              .maybeSingle(),
+            supabase
+              .from("user_roles")
+              .select("role")
+              .eq("user_id", userId)
+              .eq("role", "admin")
+              .maybeSingle(),
+          ]);
           profile = row;
+          isAdmin = !!roleRow;
         }
       }
     }
@@ -184,10 +211,11 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
     const name =
       (profile?.display_name && profile.display_name.trim()) ||
       (profile?.email ? profile.email.split("@")[0] : "friend");
-    const systemPrompt = SYSTEM.replace(/\{name\}/g, name);
+    const systemPrompt = SYSTEM.replace(/\{name\}/g, name) + (isAdmin ? ADMIN_PROMPT : "");
 
     const key = process.env.LOVABLE_API_KEY;
     if (!key) return { ok: false as const, error: "AI not configured." };
+
 
     const tools = [
       {
@@ -221,6 +249,35 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
           },
         },
       },
+      ...(isAdmin
+        ? [
+            {
+              type: "function",
+              function: {
+                name: "admin_stats",
+                description:
+                  "Admin only. Get platform totals (users, pro, free, images today) and the last 7 days of image usage.",
+                parameters: { type: "object", properties: {}, additionalProperties: false },
+              },
+            },
+            {
+              type: "function",
+              function: {
+                name: "admin_list_users",
+                description:
+                  "Admin only. List users with email, plan, roles and join date. Optional email search and limit.",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    q: { type: "string", description: "Optional email search text" },
+                    limit: { type: "number", description: "Max users (default 50, max 200)" },
+                  },
+                  additionalProperties: false,
+                },
+              },
+            },
+          ]
+        : []),
     ];
 
     const convo: Array<Record<string, unknown>> = [
@@ -263,9 +320,10 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
 
       convo.push(msg);
       const { searchWeb, fetchDocument } = await import("./web-tools.server");
+      const { adminStats, adminListUsers } = await import("./admin-ai.server");
       const results = await Promise.all(
         calls.slice(0, 4).map(async (c) => {
-          let args: { query?: string; pdfOnly?: boolean; url?: string } = {};
+          let args: { query?: string; pdfOnly?: boolean; url?: string; q?: string; limit?: number } = {};
           try {
             args = JSON.parse(c.function.arguments || "{}");
           } catch {
@@ -276,6 +334,10 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
               return { id: c.id, out: await searchWeb(args.query, { pdfOnly: !!args.pdfOnly }) };
             if (c.function.name === "fetch_document" && args.url)
               return { id: c.id, out: await fetchDocument(args.url) };
+            if (isAdmin && c.function.name === "admin_stats")
+              return { id: c.id, out: await adminStats() };
+            if (isAdmin && c.function.name === "admin_list_users")
+              return { id: c.id, out: await adminListUsers(args.q, args.limit) };
           } catch (e) {
             return { id: c.id, out: { ok: false, error: (e as Error).message } };
           }
@@ -303,12 +365,41 @@ const ImageInput = z.object({
   prompt: z.string().min(1).max(2000),
 });
 
+const GENELO_LOGO_URL =
+  "/__l5e/assets-v1/f717c15c-b7b0-4c58-9d24-077f2748f5a3/genelo-ai-logo-v3.png";
+
+/** Brand descriptions so "generate the logo of X AI" produces the real mark, not a random icon. */
+const BRAND_LOGOS: { match: RegExp; desc: string }[] = [
+  { match: /\bchat\s*gpt|openai\b/i, desc: "the official OpenAI / ChatGPT logo: a symmetrical black-and-white knotted hexagonal flower mark ('blossom'), flat vector, centered" },
+  { match: /\bgemini\b|google ai/i, desc: "the official Google Gemini logo: a four-pointed sparkle star with blue-to-purple gradient, flat vector, centered" },
+  { match: /\bclaude\b|anthropic/i, desc: "the official Anthropic Claude logo: a warm terracotta-orange radial burst mark on cream background, flat vector, centered" },
+  { match: /\bcopilot\b/i, desc: "the GitHub Copilot logo: a friendly rounded robot head outline, monochrome flat vector, centered" },
+  { match: /\bgrok\b|\bxai\b/i, desc: "the xAI Grok logo: a sharp angular black slashed X-like glyph, flat vector, centered" },
+  { match: /\bdeepseek\b/i, desc: "the DeepSeek logo: a stylized blue whale-like curve mark, flat vector, centered" },
+  { match: /\bmeta ai|llama\b/i, desc: "the Meta AI logo: an infinity-like blue-to-purple gradient loop mark, flat vector, centered" },
+  { match: /\bmistral\b/i, desc: "the Mistral AI logo: a stepped pixel grid in yellow, orange and red, flat vector, centered" },
+  { match: /\bperplexity\b/i, desc: "the Perplexity AI logo: a teal geometric interlocking line mark, flat vector, centered" },
+];
+
+function brandedImagePrompt(prompt: string) {
+  if (!/\blogo|icon|brand|emblem\b/i.test(prompt)) return prompt;
+  const brand = BRAND_LOGOS.find((b) => b.match.test(prompt));
+  if (!brand) return prompt;
+  return `Recreate ${brand.desc}. Clean official brand mark, accurate shape and colors, transparent-looking solid white background, no extra text, high resolution. Original user request: ${prompt}`;
+}
+
 export const generateImage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => ImageInput.parse(d))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const mode = MODES.find((m) => m.id === data.modeId) ?? MODES[0];
+
+    // Genelo AI's own logo is a real asset — never hallucinate it.
+    if (/genelo/i.test(data.prompt) && /\blogo|icon|brand|emblem\b/i.test(data.prompt)) {
+      return { ok: true as const, url: GENELO_LOGO_URL };
+    }
+
 
     const { data: profile } = await context.supabase
       .from("profiles")
@@ -347,7 +438,7 @@ export const generateImage = createServerFn({ method: "POST" })
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash-image",
-        messages: [{ role: "user", content: data.prompt }],
+        messages: [{ role: "user", content: brandedImagePrompt(data.prompt) }],
         modalities: ["image", "text"],
       }),
     });
