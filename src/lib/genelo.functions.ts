@@ -126,7 +126,14 @@ const ChatInput = z.object({
                 z.object({ type: z.literal("text"), text: z.string().min(1).max(40000) }),
                 z.object({
                   type: z.literal("image_url"),
-                  image_url: z.object({ url: z.string().min(1).max(2_000_000) }),
+                  image_url: z.object({ url: z.string().min(1).max(3_000_000) }),
+                }),
+                z.object({
+                  type: z.literal("file"),
+                  file: z.object({
+                    filename: z.string().min(1).max(200),
+                    file_data: z.string().min(1).max(6_000_000),
+                  }),
                 }),
               ]),
             )
