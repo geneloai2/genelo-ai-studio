@@ -61,7 +61,7 @@ export const Route = createFileRoute("/")({
   component: HomePage,
 });
 
-type Attachment = { name: string; mime: string; dataUrl: string; kind: "image" | "file"; text?: string };
+type Attachment = { name: string; mime: string; dataUrl?: string; kind: "image" | "file"; text?: string };
 type Msg = { role: "user" | "assistant"; content: string; image?: string; attachments?: Attachment[] };
 type Profile = { plan: string; display_name?: string | null; avatar_url?: string | null; email?: string | null };
 
