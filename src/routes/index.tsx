@@ -607,7 +607,12 @@ function HomePage() {
           ) : (
             <div className="space-y-8">
               {messages.map((m, i) => (
-                <Bubble key={i} msg={m} />
+                <Bubble
+                  key={i}
+                  msg={m}
+                  showSuggestions={!busy && m.role === "assistant" && i === messages.length - 1}
+                  onSuggestion={(t) => send(t)}
+                />
               ))}
               {busy && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
