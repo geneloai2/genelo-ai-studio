@@ -358,12 +358,41 @@ const ImageInput = z.object({
   prompt: z.string().min(1).max(2000),
 });
 
+const GENELO_LOGO_URL =
+  "/__l5e/assets-v1/f717c15c-b7b0-4c58-9d24-077f2748f5a3/genelo-ai-logo-v3.png";
+
+/** Brand descriptions so "generate the logo of X AI" produces the real mark, not a random icon. */
+const BRAND_LOGOS: { match: RegExp; desc: string }[] = [
+  { match: /\bchat\s*gpt|openai\b/i, desc: "the official OpenAI / ChatGPT logo: a symmetrical black-and-white knotted hexagonal flower mark ('blossom'), flat vector, centered" },
+  { match: /\bgemini\b|google ai/i, desc: "the official Google Gemini logo: a four-pointed sparkle star with blue-to-purple gradient, flat vector, centered" },
+  { match: /\bclaude\b|anthropic/i, desc: "the official Anthropic Claude logo: a warm terracotta-orange radial burst mark on cream background, flat vector, centered" },
+  { match: /\bcopilot\b/i, desc: "the GitHub Copilot logo: a friendly rounded robot head outline, monochrome flat vector, centered" },
+  { match: /\bgrok\b|\bxai\b/i, desc: "the xAI Grok logo: a sharp angular black slashed X-like glyph, flat vector, centered" },
+  { match: /\bdeepseek\b/i, desc: "the DeepSeek logo: a stylized blue whale-like curve mark, flat vector, centered" },
+  { match: /\bmeta ai|llama\b/i, desc: "the Meta AI logo: an infinity-like blue-to-purple gradient loop mark, flat vector, centered" },
+  { match: /\bmistral\b/i, desc: "the Mistral AI logo: a stepped pixel grid in yellow, orange and red, flat vector, centered" },
+  { match: /\bperplexity\b/i, desc: "the Perplexity AI logo: a teal geometric interlocking line mark, flat vector, centered" },
+];
+
+function brandedImagePrompt(prompt: string) {
+  if (!/\blogo|icon|brand|emblem\b/i.test(prompt)) return prompt;
+  const brand = BRAND_LOGOS.find((b) => b.match.test(prompt));
+  if (!brand) return prompt;
+  return `Recreate ${brand.desc}. Clean official brand mark, accurate shape and colors, transparent-looking solid white background, no extra text, high resolution. Original user request: ${prompt}`;
+}
+
 export const generateImage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => ImageInput.parse(d))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const mode = MODES.find((m) => m.id === data.modeId) ?? MODES[0];
+
+    // Genelo AI's own logo is a real asset — never hallucinate it.
+    if (/genelo/i.test(data.prompt) && /\blogo|icon|brand|emblem\b/i.test(data.prompt)) {
+      return { ok: true as const, url: GENELO_LOGO_URL };
+    }
+
 
     const { data: profile } = await context.supabase
       .from("profiles")
