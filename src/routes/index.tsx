@@ -786,17 +786,67 @@ function HomePage() {
   );
 }
 
-function Bubble({ msg }: { msg: Msg }) {
+/** Clipboard that also works inside Android WebView / older mobile browsers. */
+async function copyText(text: string) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    /* fall through */
+  }
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.top = "-1000px";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, ta.value.length);
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
+/** Pull the AI's own follow-up offers out of a reply so they can be tapped. */
+function extractSuggestions(content: string): string[] {
+  const plain = content
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1");
+  const tail = plain.split(/\n/).slice(-8).join("\n");
+  const matches = tail.match(/[^.?!\n]{12,180}\?/g) ?? [];
+  const cleaned = matches
+    .map((s) => s.replace(/^[\s>*\-•#0-9.]+/, "").replace(/\*\*/g, "").trim())
+    .filter((s) => /\b(would|do you|shall|should|want|need|can i|like me|ningependa|unataka|je)\b/i.test(s));
+  return Array.from(new Set(cleaned)).slice(0, 3);
+}
+
+function Bubble({
+  msg,
+  onSuggestion,
+  showSuggestions,
+}: {
+  msg: Msg;
+  onSuggestion?: (text: string) => void;
+  showSuggestions?: boolean;
+}) {
   const isUser = msg.role === "user";
   const [copied, setCopied] = useState(false);
   async function copy() {
-    try {
-      await navigator.clipboard.writeText(msg.content);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      /* ignore */
+    const ok = await copyText(msg.content);
+    if (!ok) {
+      toast.error("Could not copy. Long-press the text to copy manually.");
+      return;
     }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
   }
   if (isUser) {
     return (
@@ -805,7 +855,7 @@ function Bubble({ msg }: { msg: Msg }) {
           {msg.attachments && msg.attachments.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-2">
               {msg.attachments.map((a, i) =>
-                a.kind === "image" ? (
+                a.kind === "image" && a.dataUrl ? (
                   <img key={i} src={a.dataUrl} alt={a.name} className="h-20 w-20 rounded-md object-cover" />
                 ) : (
                   <div key={i} className="flex items-center gap-1 rounded-md bg-background/10 px-2 py-1 text-xs">
@@ -818,7 +868,7 @@ function Bubble({ msg }: { msg: Msg }) {
           <p className="whitespace-pre-wrap pr-6 text-sm">{msg.content}</p>
           <button
             onClick={copy}
-            className="absolute -left-9 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-muted-foreground opacity-0 transition-opacity hover:bg-muted group-hover:opacity-100"
+            className="absolute -left-9 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-muted-foreground transition-opacity hover:bg-muted md:opacity-0 md:group-hover:opacity-100"
             aria-label="Copy your message"
             title="Copy"
           >
@@ -828,6 +878,7 @@ function Bubble({ msg }: { msg: Msg }) {
       </div>
     );
   }
+  const suggestions = showSuggestions ? extractSuggestions(msg.content) : [];
   // Assistant: full-width, no box, ChatGPT-style
   return (
     <div className="group flex gap-3">
@@ -843,7 +894,20 @@ function Bubble({ msg }: { msg: Msg }) {
             className="mt-3 max-h-96 rounded-lg border border-border"
           />
         )}
-        <div className="mt-2 flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+        {suggestions.length > 0 && onSuggestion && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {suggestions.map((s) => (
+              <button
+                key={s}
+                onClick={() => onSuggestion(s.replace(/^"|"$/g, ""))}
+                className="rounded-full border border-border bg-background px-3 py-1.5 text-left text-xs font-medium text-foreground transition-colors hover:bg-accent"
+              >
+                ✨ {s}
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="mt-2 flex items-center gap-2 transition-opacity md:opacity-0 md:group-hover:opacity-100">
           <button
             onClick={copy}
             className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -856,6 +920,7 @@ function Bubble({ msg }: { msg: Msg }) {
     </div>
   );
 }
+
 
 function Welcome({ name, onPick }: { name: string; onPick: (text: string) => void }) {
   const examples = [
