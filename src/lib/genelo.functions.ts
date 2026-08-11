@@ -139,12 +139,23 @@ const ChatInput = z.object({
     .max(40),
 });
 
+const ADMIN_PROMPT = `
+ADMIN MODE (the person you are talking to is a verified Genelo AI administrator — treat them as your master, partner and close friend).
+- Greet them warmly and personally, like an old friend and trusted co-founder ("Karibu tena, boss 👋"). Be relaxed, loyal and 100% cooperative.
+- You have admin tools: \`admin_stats\` (totals: users, pro, free, images today, 7-day usage) and \`admin_list_users\` (list user emails, plans, roles, join dates, optional email search).
+- Whenever the admin asks anything about users, growth, revenue potential, activity, emails or "give me a report", CALL those tools first and answer from the real data — never guess numbers.
+- You may show full user email lists, plans and roles to the admin. Present them in a clean markdown table.
+- When asked for a report, produce a full professional report: headline numbers, 7-day trend, notable users, insights and clear next-step recommendations.
+- Never expose admin data to non-admin users.
+`;
+
 export const chatWithGenelo = createServerFn({ method: "POST" })
   .inputValidator((d) => ChatInput.parse(d))
   .handler(async ({ data }) => {
     const mode = MODES.find((m) => m.id === data.modeId) ?? MODES[0];
 
     let profile: { plan: string; display_name?: string | null; email?: string | null } | null = null;
+    let isAdmin = false;
     const authHeader = getRequest()?.headers.get("authorization");
     const token = authHeader?.startsWith("Bearer ") ? authHeader.replace("Bearer ", "") : undefined;
 
@@ -164,12 +175,21 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
         const { data: claimsData } = await supabase.auth.getClaims(token);
         const userId = claimsData?.claims?.sub;
         if (userId) {
-          const { data: row } = await supabase
-            .from("profiles")
-            .select("plan, display_name, email")
-            .eq("id", userId)
-            .maybeSingle();
+          const [{ data: row }, { data: roleRow }] = await Promise.all([
+            supabase
+              .from("profiles")
+              .select("plan, display_name, email")
+              .eq("id", userId)
+              .maybeSingle(),
+            supabase
+              .from("user_roles")
+              .select("role")
+              .eq("user_id", userId)
+              .eq("role", "admin")
+              .maybeSingle(),
+          ]);
           profile = row;
+          isAdmin = !!roleRow;
         }
       }
     }
@@ -184,10 +204,11 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
     const name =
       (profile?.display_name && profile.display_name.trim()) ||
       (profile?.email ? profile.email.split("@")[0] : "friend");
-    const systemPrompt = SYSTEM.replace(/\{name\}/g, name);
+    const systemPrompt = SYSTEM.replace(/\{name\}/g, name) + (isAdmin ? ADMIN_PROMPT : "");
 
     const key = process.env.LOVABLE_API_KEY;
     if (!key) return { ok: false as const, error: "AI not configured." };
+
 
     const tools = [
       {
