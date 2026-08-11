@@ -315,7 +315,7 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
       const { searchWeb, fetchDocument } = await import("./web-tools.server");
       const results = await Promise.all(
         calls.slice(0, 4).map(async (c) => {
-          let args: { query?: string; pdfOnly?: boolean; url?: string } = {};
+          let args: { query?: string; pdfOnly?: boolean; url?: string; q?: string; limit?: number } = {};
           try {
             args = JSON.parse(c.function.arguments || "{}");
           } catch {
@@ -326,6 +326,10 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
               return { id: c.id, out: await searchWeb(args.query, { pdfOnly: !!args.pdfOnly }) };
             if (c.function.name === "fetch_document" && args.url)
               return { id: c.id, out: await fetchDocument(args.url) };
+            if (isAdmin && c.function.name === "admin_stats")
+              return { id: c.id, out: await adminStats() };
+            if (isAdmin && c.function.name === "admin_list_users")
+              return { id: c.id, out: await adminListUsers(args.q, args.limit) };
           } catch (e) {
             return { id: c.id, out: { ok: false, error: (e as Error).message } };
           }
