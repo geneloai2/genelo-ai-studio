@@ -313,6 +313,7 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
 
       convo.push(msg);
       const { searchWeb, fetchDocument } = await import("./web-tools.server");
+      const { adminStats, adminListUsers } = await import("./admin-ai.server");
       const results = await Promise.all(
         calls.slice(0, 4).map(async (c) => {
           let args: { query?: string; pdfOnly?: boolean; url?: string; q?: string; limit?: number } = {};
