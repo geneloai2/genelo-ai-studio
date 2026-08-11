@@ -330,6 +330,14 @@ function HomePage() {
             for (const a of x.attachments) {
               if (a.kind === "image" && a.dataUrl)
                 parts.push({ type: "image_url", image_url: { url: a.dataUrl } });
+              else if (
+                a.kind === "file" &&
+                !a.text &&
+                a.dataUrl &&
+                (a.mime === "application/pdf" || /\.pdf$/i.test(a.name)) &&
+                a.dataUrl.length < 5_500_000
+              )
+                parts.push({ type: "file", file: { filename: a.name, file_data: a.dataUrl } });
             }
             return { role: x.role, content: parts };
           }
