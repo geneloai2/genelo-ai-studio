@@ -228,22 +228,61 @@ function HomePage() {
     });
   }
 
+  /** Downscale images so the upload always fits the AI request limits. */
+  function compressImage(dataUrl: string, max = 1152, quality = 0.8): Promise<string> {
+    return new Promise((res) => {
+      try {
+        const img = new Image();
+        img.onload = () => {
+          const scale = Math.min(1, max / Math.max(img.width, img.height));
+          const w = Math.max(1, Math.round(img.width * scale));
+          const h = Math.max(1, Math.round(img.height * scale));
+          const canvas = document.createElement("canvas");
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return res(dataUrl);
+          ctx.drawImage(img, 0, 0, w, h);
+          res(canvas.toDataURL("image/jpeg", quality));
+        };
+        img.onerror = () => res(dataUrl);
+        img.src = dataUrl;
+      } catch {
+        res(dataUrl);
+      }
+    });
+  }
+
   async function onPickFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
     const next: Attachment[] = [];
     for (const f of Array.from(files).slice(0, 4)) {
-      if (f.size > 8 * 1024 * 1024) {
-        toast.error(`${f.name} is larger than 8MB`);
+      if (f.size > 12 * 1024 * 1024) {
+        toast.error(`${f.name} is larger than 12MB`);
         continue;
       }
       try {
         const isImage = f.type.startsWith("image/");
-        const dataUrl = await readFileAsDataURL(f);
+        let dataUrl = await readFileAsDataURL(f);
         let text: string | undefined;
-        if (!isImage && (f.type.startsWith("text/") || /\.(md|csv|json|js|ts|tsx|jsx|html|css|py)$/i.test(f.name))) {
+        if (isImage) {
+          dataUrl = await compressImage(dataUrl);
+          if (dataUrl.length > 1_800_000) dataUrl = await compressImage(dataUrl, 800, 0.65);
+        } else if (
+          f.type.startsWith("text/") ||
+          /\.(md|txt|csv|json|js|ts|tsx|jsx|html|css|py|java|php|sql|xml|yml|yaml)$/i.test(f.name)
+        ) {
           text = (await readFileAsText(f)).slice(0, 20000);
+        } else if (/\.pdf$/i.test(f.name) || f.type === "application/pdf") {
+          text = undefined;
         }
-        next.push({ name: f.name, mime: f.type || "application/octet-stream", dataUrl, kind: isImage ? "image" : "file", text });
+        next.push({
+          name: f.name,
+          mime: f.type || "application/octet-stream",
+          dataUrl,
+          kind: isImage ? "image" : "file",
+          text,
+        });
       } catch {
         toast.error(`Could not read ${f.name}`);
       }
@@ -251,6 +290,7 @@ function HomePage() {
     setAttachments((a) => [...a, ...next].slice(0, 4));
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
+
 
   async function send(overrideText?: string) {
     const text = (overrideText ?? input).trim();
