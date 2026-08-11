@@ -328,7 +328,8 @@ function HomePage() {
               .join("");
             parts.push({ type: "text", text: (x.content || "") + fileNotes });
             for (const a of x.attachments) {
-              if (a.kind === "image") parts.push({ type: "image_url", image_url: { url: a.dataUrl } });
+              if (a.kind === "image" && a.dataUrl)
+                parts.push({ type: "image_url", image_url: { url: a.dataUrl } });
             }
             return { role: x.role, content: parts };
           }
