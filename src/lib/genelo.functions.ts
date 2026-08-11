@@ -242,6 +242,35 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
           },
         },
       },
+      ...(isAdmin
+        ? [
+            {
+              type: "function",
+              function: {
+                name: "admin_stats",
+                description:
+                  "Admin only. Get platform totals (users, pro, free, images today) and the last 7 days of image usage.",
+                parameters: { type: "object", properties: {}, additionalProperties: false },
+              },
+            },
+            {
+              type: "function",
+              function: {
+                name: "admin_list_users",
+                description:
+                  "Admin only. List users with email, plan, roles and join date. Optional email search and limit.",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    q: { type: "string", description: "Optional email search text" },
+                    limit: { type: "number", description: "Max users (default 50, max 200)" },
+                  },
+                  additionalProperties: false,
+                },
+              },
+            },
+          ]
+        : []),
     ];
 
     const convo: Array<Record<string, unknown>> = [
