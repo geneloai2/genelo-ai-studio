@@ -361,7 +361,7 @@ function HomePage() {
                       mime: a.mime,
                       kind: a.kind,
                       ...(a.kind === "image"
-                        ? { dataUrl: await compressImage(a.dataUrl, 320, 0.6) }
+                        ? { dataUrl: await compressImage(a.dataUrl ?? "", 320, 0.6) }
                         : {}),
                     })),
                   ),
