@@ -347,12 +347,28 @@ function HomePage() {
 
       if (!user) return;
       try {
-        // Strip large dataUrls before saving to keep payload small
-        const toSave = finalMessages.map((m) => ({
-          role: m.role,
-          content: m.content,
-          ...(m.image ? { image: m.image } : {}),
-        }));
+        // Keep a small thumbnail of uploads so history shows the attached files.
+        const toSave = await Promise.all(
+          finalMessages.map(async (m) => ({
+            role: m.role,
+            content: m.content,
+            ...(m.image ? { image: m.image } : {}),
+            ...(m.attachments && m.attachments.length
+              ? {
+                  attachments: await Promise.all(
+                    m.attachments.map(async (a) => ({
+                      name: a.name,
+                      mime: a.mime,
+                      kind: a.kind,
+                      ...(a.kind === "image"
+                        ? { dataUrl: await compressImage(a.dataUrl, 320, 0.6) }
+                        : {}),
+                    })),
+                  ),
+                }
+              : {}),
+          })),
+        );
         const r = await saveFn({
           data: {
             id: chatId,
