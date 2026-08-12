@@ -429,68 +429,241 @@ function HomePage() {
 
   const currentMode = getMode(mode);
 
+  const composer = (
+    <div className="mx-auto w-full max-w-3xl px-3 pb-3 pt-2">
+      {attachments.length > 0 && (
+        <div className="mb-2 flex flex-wrap gap-2">
+          {attachments.map((a, i) => (
+            <div key={i} className="flex items-center gap-2 rounded-lg border border-border bg-card px-2 py-1 text-xs">
+              {a.kind === "image" ? (
+                <img src={a.dataUrl} alt={a.name} className="h-8 w-8 rounded object-cover" />
+              ) : (
+                <FileText className="h-4 w-4 text-muted-foreground" />
+              )}
+              <span className="max-w-[160px] truncate">{a.name}</span>
+              <button
+                onClick={() => setAttachments((arr) => arr.filter((_, j) => j !== i))}
+                className="rounded p-0.5 text-muted-foreground hover:bg-muted"
+                aria-label="Remove attachment"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="flex flex-col gap-1 rounded-[1.75rem] border border-border bg-muted/60 px-2 py-1.5 shadow-sm transition-colors focus-within:border-foreground/30">
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept="image/*,.pdf,.txt,.md,.csv,.json,.js,.ts,.tsx,.jsx,.html,.css,.py"
+          className="hidden"
+          onChange={(e) => onPickFiles(e.target.files)}
+        />
+        <div className="flex items-end gap-1">
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="mb-1 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-background"
+            title="Attach files"
+            aria-label="Attach files"
+          >
+            <Plus className="h-5 w-5" />
+          </button>
+          <textarea
+            ref={textareaRef}
+            value={input}
+            onChange={(e) => {
+              setInput(e.target.value);
+              const el = e.currentTarget;
+              el.style.height = "auto";
+              el.style.height = Math.min(el.scrollHeight, 240) + "px";
+            }}
+            onFocus={() => scrollRef.current?.scrollTo({ top: 9e9, behavior: "smooth" })}
+            onPaste={(e) => {
+              const txt = e.clipboardData.getData("text");
+              if (txt && txt.length > 1500) {
+                e.preventDefault();
+                const name = `pasted-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-")}.txt`;
+                const dataUrl = "data:text/plain;base64," + btoa(unescape(encodeURIComponent(txt)));
+                setAttachments((a) =>
+                  [...a, { name, mime: "text/plain", dataUrl, kind: "file" as const, text: txt.slice(0, 20000) }].slice(0, 4),
+                );
+                toast.success("Large paste saved as a .txt attachment");
+              }
+            }}
+            onKeyDown={(e) => {
+              const isNative =
+                typeof window !== "undefined" &&
+                ((window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } })
+                  .Capacitor?.isNativePlatform?.() ||
+                  window.matchMedia?.("(pointer: coarse)").matches);
+              if (e.key === "Enter" && !e.shiftKey && !isNative) {
+                e.preventDefault();
+                send();
+              }
+            }}
+            rows={1}
+            placeholder={
+              imgMode
+                ? "Describe an image to generate…"
+                : listening
+                  ? "Listening…"
+                  : "Ask anything"
+            }
+            className="min-h-[40px] max-h-60 w-full resize-none overflow-y-auto bg-transparent px-1 py-2.5 text-[15px] leading-6 outline-none placeholder:text-muted-foreground"
+          />
+          <div className="mb-1 flex flex-shrink-0 items-center gap-0.5">
+            <button
+              onClick={() => setImgMode((v) => !v)}
+              className={`flex h-9 items-center gap-1 rounded-full px-3 text-xs font-medium transition-colors ${
+                imgMode ? "bg-foreground text-background" : "text-muted-foreground hover:bg-background"
+              }`}
+              title="Toggle image generation"
+            >
+              <ImageIcon className="h-4 w-4" />
+              <span className="hidden sm:inline">{imgMode ? "Image" : "Chat"}</span>
+            </button>
+            <button
+              onClick={() => setSpeakReplies((v) => !v)}
+              className={`flex h-9 w-9 items-center justify-center rounded-full transition-colors ${
+                speakReplies ? "bg-foreground text-background" : "text-muted-foreground hover:bg-background"
+              }`}
+              title={speakReplies ? "Voice replies on" : "Voice replies off"}
+              aria-label="Toggle voice replies"
+            >
+              {speakReplies ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+            </button>
+            <button
+              onClick={toggleMic}
+              className={`flex h-9 w-9 items-center justify-center rounded-full transition-colors ${
+                listening ? "bg-destructive text-destructive-foreground animate-pulse" : "text-muted-foreground hover:bg-background"
+              }`}
+              title={listening ? "Stop voice input" : "Start voice input"}
+              aria-label="Voice input"
+            >
+              {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            </button>
+            {input.trim() || attachments.length > 0 ? (
+              <button
+                onClick={() => send()}
+                disabled={busy}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-foreground text-background transition-opacity disabled:opacity-40"
+                aria-label="Send"
+              >
+                <Send className="h-4 w-4" />
+              </button>
+            ) : (
+              <button
+                onClick={() => setLiveOpen(true)}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-foreground text-background hover:opacity-90"
+                title="Live voice chat"
+                aria-label="Live voice chat"
+              >
+                <Radio className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+      <p className="mt-2 text-center text-[11px] text-muted-foreground">
+        Genelo can make mistakes. Verify important information.
+      </p>
+    </div>
+  );
+
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex h-screen overflow-hidden bg-background">
       <Toaster richColors position="top-center" />
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-30 w-72 transform border-r border-border bg-background transition-transform ${
+        className={`fixed inset-y-0 left-0 z-30 flex w-[260px] flex-col border-r border-border bg-muted/40 transition-transform md:static md:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between px-3 py-3">
+          <Link to="/" className="flex items-center gap-2">
             <img
               src={LOGO_URL}
               alt="Genelo AI"
-              width={36}
-              height={28}
-              className="h-7 w-9 rounded-md border-2 border-foreground/80 bg-background object-contain p-0.5 shadow-sm"
+              width={32}
+              height={26}
+              className="h-7 w-8 rounded-md bg-background object-contain"
               loading="eager"
             />
-            <span className="text-sm font-semibold">Chat history</span>
-          </div>
+            <span className="text-[15px] font-semibold tracking-tight">Genelo AI</span>
+          </Link>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="rounded-md p-1.5 text-muted-foreground hover:bg-muted"
+            className="rounded-md p-1.5 text-muted-foreground hover:bg-background md:hidden"
             aria-label="Close sidebar"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="px-3 py-3">
+
+        <nav className="space-y-0.5 px-2">
           <button
             onClick={newChat}
-            className="flex w-full items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium hover:bg-accent"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium hover:bg-background"
           >
             <Plus className="h-4 w-4" /> New chat
           </button>
-        </div>
-        <div className="h-[calc(100vh-9rem)] overflow-y-auto px-2 pb-4">
+          <button
+            onClick={() => {
+              setImgMode(true);
+              setSidebarOpen(false);
+              textareaRef.current?.focus();
+            }}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm hover:bg-background"
+          >
+            <ImageIcon className="h-4 w-4" /> Images
+          </button>
+          <Link
+            to="/docs"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm hover:bg-background"
+          >
+            <FileText className="h-4 w-4" /> Docs
+          </Link>
+          <Link
+            to="/pricing"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm hover:bg-background"
+          >
+            <Sparkles className="h-4 w-4" /> Plans
+          </Link>
+          {isAdmin && (
+            <Link
+              to="/admin"
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm hover:bg-background"
+            >
+              <Shield className="h-4 w-4" /> Admin
+            </Link>
+          )}
+        </nav>
+
+        <div className="mt-4 flex-1 overflow-y-auto px-2 pb-4">
+          <div className="px-3 pb-1 pt-2 text-xs font-medium text-muted-foreground">Recents</div>
           {chats.length === 0 ? (
-            <div className="px-3 py-6 text-center text-xs text-muted-foreground">
-              No chats yet. Start a conversation!
+            <div className="px-3 py-3 text-xs text-muted-foreground">
+              {user ? "No chats yet." : "Sign in to save your chats."}
             </div>
           ) : (
-            <ul className="space-y-1">
+            <ul className="space-y-0.5">
               {chats.map((c) => (
                 <li key={c.id}>
                   <Link
                     to="/"
                     search={{ chat: c.id } as any}
                     onClick={() => setSidebarOpen(false)}
-                    className={`group flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm hover:bg-muted ${
-                      chatId === c.id ? "bg-muted" : ""
+                    className={`group flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm hover:bg-background ${
+                      chatId === c.id ? "bg-background" : ""
                     }`}
                   >
-                    <span className="flex min-w-0 flex-1 items-center gap-2">
-                      <MessageSquare className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
-                      <span className="truncate">{c.title}</span>
-                    </span>
+                    <span className="truncate">{c.title}</span>
                     <button
                       onClick={(e) => removeChat(c.id, e)}
-                      className="rounded p-1 text-muted-foreground opacity-0 hover:bg-background hover:text-destructive group-hover:opacity-100"
+                      className="rounded p-1 text-muted-foreground opacity-0 hover:text-destructive group-hover:opacity-100"
                       aria-label="Delete chat"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -501,48 +674,76 @@ function HomePage() {
             </ul>
           )}
         </div>
+
+        <div className="border-t border-border p-2">
+          {user ? (
+            <div className="flex items-center gap-2 rounded-lg px-2 py-1.5">
+              <Link to="/settings" className="flex min-w-0 flex-1 items-center gap-2">
+                {profile?.avatar_url ? (
+                  <img
+                    src={profile.avatar_url}
+                    alt="Profile"
+                    className="h-7 w-7 rounded-full border border-border object-cover"
+                  />
+                ) : (
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-background text-xs font-semibold uppercase">
+                    {displayName.slice(0, 1)}
+                  </div>
+                )}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm leading-tight">{displayName}</span>
+                  <span className="block text-[11px] capitalize leading-tight text-muted-foreground">
+                    {profile?.plan ?? "free"}
+                  </span>
+                </span>
+              </Link>
+              {profile?.plan !== "pro" && (
+                <Link
+                  to="/pricing"
+                  className="rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium hover:bg-accent"
+                >
+                  Upgrade
+                </Link>
+              )}
+            </div>
+          ) : (
+            <Link
+              to="/login"
+              className="flex items-center justify-center gap-2 rounded-lg bg-foreground px-3 py-2 text-sm font-semibold text-background hover:opacity-90"
+            >
+              Sign in
+            </Link>
+          )}
+        </div>
       </aside>
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-20 bg-black/30"
+          className="fixed inset-0 z-20 bg-black/30 md:hidden"
           onClick={() => setSidebarOpen(false)}
           aria-hidden
         />
       )}
 
-      {/* Header */}
-      <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur">
-        <div className="mx-auto flex w-full items-center justify-between px-4 py-3">
+      {/* Main column */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="flex items-center justify-between px-3 py-2.5">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="rounded-md p-2 text-muted-foreground hover:bg-muted"
+              className="rounded-md p-2 text-muted-foreground hover:bg-muted md:hidden"
               aria-label="Open chat history"
             >
               <Menu className="h-5 w-5" />
             </button>
-            <div className="flex items-center gap-2">
-              <img
-                src={LOGO_URL}
-                alt="Genelo AI"
-                width={44}
-                height={36}
-                className="h-9 w-11 rounded-lg border-2 border-foreground/80 bg-background object-contain p-0.5 shadow-sm"
-                loading="eager"
-              />
-              <div>
-                <div className="text-sm font-semibold leading-tight">Genelo AI</div>
-                <div className="text-[11px] text-muted-foreground">{currentMode.name}</div>
-              </div>
-            </div>
+            <span className="text-sm font-medium text-muted-foreground">{currentMode.name}</span>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             {!isNativeApp() && (
               <a
                 href={APK_DOWNLOAD_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent"
+                className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted"
                 aria-label="Download Genelo AI Android APK"
                 title="Download Android APK"
               >
@@ -550,244 +751,85 @@ function HomePage() {
                 <span className="hidden sm:inline">Get APK</span>
               </a>
             )}
-            {!user ? (
+            {profile?.plan !== "pro" && (
+              <Link
+                to="/pricing"
+                className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold text-genelo hover:bg-muted"
+              >
+                <Sparkles className="h-3.5 w-3.5" /> Upgrade
+              </Link>
+            )}
+            {user ? (
+              <button
+                onClick={newChat}
+                className="rounded-full p-2 text-muted-foreground hover:bg-muted"
+                aria-label="New chat"
+                title="New chat"
+              >
+                <MessageSquare className="h-4 w-4" />
+              </button>
+            ) : (
               <Link
                 to="/login"
-                className="inline-flex items-center gap-1 rounded-full bg-foreground px-4 py-1.5 text-xs font-semibold text-background hover:opacity-90"
+                className="inline-flex items-center rounded-full bg-foreground px-4 py-1.5 text-xs font-semibold text-background hover:opacity-90"
               >
                 Sign in
               </Link>
-            ) : (
-              <>
-                {isAdmin && (
-                  <Link
-                    to="/admin"
-                    className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent"
-                  >
-                    <Shield className="h-3.5 w-3.5" /> Admin
-                  </Link>
-                )}
-                <button
-                  onClick={newChat}
-                  className="rounded-full p-2 text-muted-foreground hover:bg-muted"
-                  aria-label="New chat"
-                  title="New chat"
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
-                <Link
-                  to="/settings"
-                  className="rounded-full p-1 hover:opacity-80"
-                  aria-label="Settings"
-                  title="Settings"
-                >
-                  {profile?.avatar_url ? (
-                    <img
-                      src={profile.avatar_url}
-                      alt="Profile"
-                      className="h-8 w-8 rounded-full border border-border object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-semibold uppercase text-foreground">
-                      {displayName.slice(0, 1)}
-                    </div>
-                  )}
-                </Link>
-                <Link
-                  to="/settings"
-                  className="rounded-full p-2 text-muted-foreground hover:bg-muted"
-                  aria-label="Settings"
-                  title="Settings"
-                >
-                  <SettingsIcon className="h-4 w-4" />
-                </Link>
-              </>
+            )}
+            {user && (
+              <Link
+                to="/settings"
+                className="rounded-full p-2 text-muted-foreground hover:bg-muted"
+                aria-label="Settings"
+                title="Settings"
+              >
+                <SettingsIcon className="h-4 w-4" />
+              </Link>
             )}
           </div>
-        </div>
-      </header>
+        </header>
 
-
-      {/* Messages */}
-      <div className="relative flex flex-1 flex-col overflow-hidden bg-muted/30">
-        <main ref={scrollRef} className="mx-auto w-full flex-1 overflow-y-auto overflow-x-hidden px-4 py-6 md:max-w-3xl">
-          {messages.length === 0 ? (
-            <Welcome name={displayName} onPick={(t) => send(t)} />
-          ) : (
-            <div className="space-y-8">
-              {messages.map((m, i) => (
-                <Bubble
-                  key={i}
-                  msg={m}
-                  showSuggestions={!busy && m.role === "assistant" && i === messages.length - 1}
-                  onSuggestion={(t) => send(t)}
-                />
-              ))}
-              {busy && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Genelo is thinking…
+        {messages.length === 0 ? (
+          <div className="flex flex-1 flex-col items-center justify-center overflow-y-auto px-4">
+            <Welcome name={displayName} onPick={(t) => send(t)} composer={composer} />
+          </div>
+        ) : (
+          <>
+            <div className="relative flex flex-1 flex-col overflow-hidden">
+              <main
+                ref={scrollRef}
+                className="mx-auto w-full max-w-3xl flex-1 overflow-y-auto overflow-x-hidden px-4 py-6"
+              >
+                <div className="space-y-8">
+                  {messages.map((m, i) => (
+                    <Bubble
+                      key={i}
+                      msg={m}
+                      showSuggestions={!busy && m.role === "assistant" && i === messages.length - 1}
+                      onSuggestion={(t) => send(t)}
+                    />
+                  ))}
+                  {busy && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" /> Genelo is thinking…
+                    </div>
+                  )}
                 </div>
+              </main>
+              {showJump && (
+                <button
+                  onClick={jumpToLatest}
+                  className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-border bg-background px-3.5 py-2 text-xs font-medium shadow-lg hover:bg-muted"
+                  aria-label="Jump to latest message"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5"><path d="M6 9l6 6 6-6"/></svg>
+                  Jump to latest
+                </button>
               )}
             </div>
-          )}
-        </main>
-        {showJump && (
-          <button
-            onClick={jumpToLatest}
-            className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-border bg-background px-3.5 py-2 text-xs font-medium shadow-lg hover:bg-muted"
-            aria-label="Jump to latest message"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5"><path d="M6 9l6 6 6-6"/></svg>
-            Jump to latest
-          </button>
+            <div className="bg-background">{composer}</div>
+          </>
         )}
-      </div>
-
-
-      {/* Composer */}
-      <div className="sticky bottom-0 border-t border-border bg-background">
-        <div className="mx-auto w-full px-4 py-3 md:max-w-3xl">
-          {attachments.length > 0 && (
-            <div className="mb-2 flex flex-wrap gap-2">
-              {attachments.map((a, i) => (
-                <div key={i} className="flex items-center gap-2 rounded-lg border border-border bg-card px-2 py-1 text-xs">
-                  {a.kind === "image" ? (
-                    <img src={a.dataUrl} alt={a.name} className="h-8 w-8 rounded object-cover" />
-                  ) : (
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                  )}
-                  <span className="max-w-[160px] truncate">{a.name}</span>
-                  <button
-                    onClick={() => setAttachments((arr) => arr.filter((_, j) => j !== i))}
-                    className="rounded p-0.5 text-muted-foreground hover:bg-muted"
-                    aria-label="Remove attachment"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-          <div className="flex flex-col gap-2 rounded-2xl border border-border bg-card p-2 shadow-sm focus-within:border-foreground/40">
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept="image/*,.pdf,.txt,.md,.csv,.json,.js,.ts,.tsx,.jsx,.html,.css,.py"
-              className="hidden"
-              onChange={(e) => onPickFiles(e.target.files)}
-            />
-            <textarea
-              ref={textareaRef}
-              value={input}
-              onChange={(e) => {
-                setInput(e.target.value);
-                const el = e.currentTarget;
-                el.style.height = "auto";
-                el.style.height = Math.min(el.scrollHeight, 240) + "px";
-              }}
-              onFocus={() =>
-                scrollRef.current?.scrollTo({ top: 9e9, behavior: "smooth" })
-              }
-              onPaste={(e) => {
-                const txt = e.clipboardData.getData("text");
-                if (txt && txt.length > 1500) {
-                  e.preventDefault();
-                  const name = `pasted-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-")}.txt`;
-                  const dataUrl = "data:text/plain;base64," + btoa(unescape(encodeURIComponent(txt)));
-                  setAttachments((a) =>
-                    [...a, { name, mime: "text/plain", dataUrl, kind: "file" as const, text: txt.slice(0, 20000) }].slice(0, 4),
-                  );
-                  toast.success("Large paste saved as a .txt attachment");
-                }
-              }}
-              onKeyDown={(e) => {
-                // On native (APK) or touch devices, let Enter insert a newline.
-                // Sending is done via the send button.
-                const isNative =
-                  typeof window !== "undefined" &&
-                  ((window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } })
-                    .Capacitor?.isNativePlatform?.() ||
-                    window.matchMedia?.("(pointer: coarse)").matches);
-                if (e.key === "Enter" && !e.shiftKey && !isNative) {
-                  e.preventDefault();
-                  send();
-                }
-              }}
-              rows={1}
-              placeholder={
-                imgMode
-                  ? "Describe an image to generate…"
-                  : listening
-                    ? "Listening…"
-                    : "Ask Genelo anything — code, research, advice…"
-              }
-              className="min-h-[44px] max-h-60 w-full resize-none overflow-y-auto bg-transparent px-2 py-2 text-sm leading-6 outline-none placeholder:text-muted-foreground"
-            />
-            <div className="flex items-center gap-1.5">
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted"
-                title="Attach files"
-                aria-label="Attach files"
-              >
-                <Paperclip className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => setImgMode((v) => !v)}
-                className={`flex h-8 items-center gap-1 rounded-lg px-2.5 text-xs font-medium transition-colors ${
-                  imgMode
-                    ? "bg-foreground text-background"
-                    : "text-muted-foreground hover:bg-muted"
-                }`}
-                title="Toggle image generation"
-              >
-                <ImageIcon className="h-4 w-4" />
-                {imgMode ? "Image" : "Chat"}
-              </button>
-              <div className="flex-1" />
-              <button
-                onClick={() => setSpeakReplies((v) => !v)}
-                className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
-                  speakReplies ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted"
-                }`}
-                title={speakReplies ? "Voice replies on" : "Voice replies off"}
-                aria-label="Toggle voice replies"
-              >
-                {speakReplies ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-              </button>
-              <button
-                onClick={toggleMic}
-                className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
-                  listening ? "bg-red-500 text-white animate-pulse" : "text-muted-foreground hover:bg-muted"
-                }`}
-                title={listening ? "Stop voice input" : "Start voice input"}
-                aria-label="Voice input"
-              >
-                {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-              </button>
-              <button
-                onClick={() => setLiveOpen(true)}
-                className="flex h-8 items-center gap-1 rounded-lg bg-green-600 px-2.5 text-xs font-medium text-white hover:bg-green-700"
-                title="Live voice chat"
-                aria-label="Live voice chat"
-              >
-                <Radio className="h-3.5 w-3.5" /> Live
-              </button>
-              <button
-                onClick={() => send()}
-                disabled={busy || (!input.trim() && attachments.length === 0)}
-                className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground text-background transition-opacity disabled:opacity-40"
-                aria-label="Send"
-              >
-                <Send className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-          <p className="mt-2 text-center text-[11px] text-muted-foreground">
-            Genelo can make mistakes. Verify important information.
-          </p>
-        </div>
       </div>
 
       {liveOpen && (
