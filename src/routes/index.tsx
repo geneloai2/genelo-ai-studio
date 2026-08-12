@@ -978,55 +978,68 @@ function Bubble({
 }
 
 
-function Welcome({ name, onPick }: { name: string; onPick: (text: string) => void }) {
-  const examples = [
-    "Build a responsive React pricing card with Tailwind",
-    "Explain useEffect cleanup with an example",
-    "Calculate compound interest for 500,000 at 8% over 5 years",
-    "Generate an image of a futuristic Dar es Salaam skyline at sunset",
+function Welcome({
+  name,
+  onPick,
+  composer,
+}: {
+  name: string;
+  onPick: (text: string) => void;
+  composer: React.ReactNode;
+}) {
+  const actions = [
+    {
+      icon: <ImageIcon className="h-[18px] w-[18px] text-muted-foreground" />,
+      label: "Create an image",
+      prompt: "Generate an image of a futuristic Dar es Salaam skyline at sunset",
+    },
+    {
+      icon: <Sparkles className="h-[18px] w-[18px] text-muted-foreground" />,
+      label: "Write or edit code",
+      prompt: "Build a responsive React pricing card with Tailwind",
+    },
+    {
+      icon: <FileText className="h-[18px] w-[18px] text-muted-foreground" />,
+      label: "Research the web",
+      prompt: "Research the latest NECTA examination timetable and summarise it with sources",
+    },
   ];
   const capitalized = name.charAt(0).toUpperCase() + name.slice(1);
   return (
-    <div className="mx-auto max-w-2xl pt-12 text-center">
-      <img
-        src={LOGO_URL}
-        alt="Genelo AI"
-        width={72}
-        height={56}
-        className="mx-auto h-14 w-[4.5rem] rounded-2xl border-2 border-foreground/80 bg-background object-contain p-1 shadow-sm"
-        loading="eager"
-      />
-      <h1 className="mt-6 text-3xl font-semibold tracking-tight">
-        Welcome back, {capitalized} 👋
+    <div className="mx-auto w-full max-w-3xl py-6">
+      <h1 className="text-center text-[28px] font-semibold tracking-tight md:text-[32px]">
+        Where should we begin, {capitalized}?
       </h1>
-      <p className="mt-2 text-sm text-muted-foreground">
-        How can Genelo help you today?
-      </p>
-      <div className="mt-8 grid gap-2 text-left sm:grid-cols-2">
-        {examples.map((e) => (
+      <div className="mt-6">{composer}</div>
+      <div className="mx-auto mt-2 max-w-xl space-y-0.5 px-3">
+        {actions.map((a) => (
           <button
-            key={e}
-            onClick={() => onPick(e)}
-            className="rounded-xl border border-border bg-card px-4 py-3 text-left text-sm text-muted-foreground transition-colors hover:border-foreground/40 hover:bg-accent hover:text-foreground"
+            key={a.label}
+            onClick={() => onPick(a.prompt)}
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[15px] text-foreground/90 transition-colors hover:bg-muted"
           >
-            {e}
+            {a.icon}
+            {a.label}
           </button>
         ))}
       </div>
       {!isNativeApp() && (
-        <a
-          href={APK_DOWNLOAD_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-6 inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-sm font-semibold text-background transition-opacity hover:opacity-90"
-        >
-          <Download className="h-4 w-4" />
-          Download Genelo AI Android APK
-        </a>
+        <div className="mt-6 text-center">
+          <a
+            href={APK_DOWNLOAD_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-xs font-medium hover:bg-muted"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Download the Genelo AI Android app
+          </a>
+        </div>
       )}
     </div>
   );
 }
+
 
 function LiveTalk({ mode, onClose }: { mode: ModeId; onClose: () => void }) {
   const chatFn = useServerFn(chatWithGenelo);
