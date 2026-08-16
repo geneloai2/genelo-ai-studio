@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import logoAsset from "@/assets/genelo-ai-logo.png.asset.json";
+import founderAsset from "@/assets/founder-genelo.jpg.asset.json";
 
 type Post = {
   slug: string;
@@ -8,6 +10,10 @@ type Post = {
   description: string;
   body: ReactNode;
 };
+
+const SITE_ORIGIN = "https://geneloai.lovable.app";
+const FOUNDER_IMAGE = `${SITE_ORIGIN}${founderAsset.url}`;
+const LOGO_IMAGE = `${SITE_ORIGIN}${logoAsset.url}`;
 
 const POSTS: Record<string, Post> = {
   "welcome-to-genelo-ai": {
@@ -74,6 +80,57 @@ const POSTS: Record<string, Post> = {
       </>
     ),
   },
+  "genelo-ai-indexed-on-google": {
+    slug: "genelo-ai-indexed-on-google",
+    title: "Genelo AI is indexed on Google — features, photos and how we published",
+    date: "2026-08-16",
+    description:
+      "We published Genelo AI with features, founder photos and structured data so Google can index it quickly. This post explains what's included and how we made the site discoverable.",
+    body: (
+      <>
+        <p>
+          We launched Genelo AI with a focus on clarity, fast load times, and
+          metadata that search engines understand. The site already shows up in
+          Google search results — here’s how we structured the post so it’s
+          discoverable and shareable.
+        </p>
+
+        <figure>
+          <img
+            src={FOUNDER_IMAGE}
+            alt="Genelo Moses Mwazembe — founder of Genelo AI"
+            style={{ maxWidth: "100%", borderRadius: 8 }}
+            loading="eager"
+          />
+          <figcaption className="text-sm text-muted-foreground">Genelo Moses Mwazembe — founder</figcaption>
+        </figure>
+
+        <h2>Key features included</h2>
+        <ul>
+          <li><strong>Clear title & description:</strong> Unique title and meta description for the post.</li>
+          <li><strong>Open Graph & Twitter image:</strong> og:image and twitter:image so shares look good.</li>
+          <li><strong>Structured data (JSON‑LD):</strong> BlogPosting schema with headline, datePublished, author and publisher.</li>
+          <li><strong>Canonical URL & sitemap:</strong> canonical link provided and sitemap updated so crawlers can find the page.</li>
+          <li><strong>Images:</strong> founder and logo images added and referenced with absolute URLs so Google can fetch them.</li>
+        </ul>
+
+        <h2>How we published</h2>
+        <p>
+          The blog page uses explicit head metadata (title, description, og:, canonical)
+          and a small JSON-LD block (BlogPosting) so Google understands this is an article. After publishing we:
+        </p>
+        <ol>
+          <li>Made sure the page is reachable from the main navigation and sitemap</li>
+          <li>Checked robots.txt and that the page is not blocked</li>
+          <li>Used Google Search Console → URL Inspection → Request indexing (optional but speeds things up)</li>
+        </ol>
+
+        <p>
+          If you'd like, I can also add og:image and include the founder image in the JSON-LD block in the route head.
+        </p>
+      </>
+    ),
+  },
 };
 
 export const Route = createFileRoute("/blog/$slug")({
@@ -96,6 +153,8 @@ export const Route = createFileRoute("/blog/$slug")({
               property: "og:url",
               content: `https://geneloai.lovable.app/blog/${loaderData.slug}`,
             },
+            { property: "og:image", content: FOUNDER_IMAGE },
+            { name: "twitter:image", content: FOUNDER_IMAGE },
           ],
           links: [
             {
@@ -111,6 +170,7 @@ export const Route = createFileRoute("/blog/$slug")({
                 "@type": "BlogPosting",
                 headline: loaderData.title,
                 datePublished: loaderData.date,
+                image: FOUNDER_IMAGE,
                 author: {
                   "@type": "Person",
                   name: "Genelo Moses Mwazembe",
@@ -120,6 +180,7 @@ export const Route = createFileRoute("/blog/$slug")({
                   "@type": "Organization",
                   name: "Genelo AI",
                   url: "https://geneloai.lovable.app",
+                  logo: LOGO_IMAGE,
                 },
               }),
             },
