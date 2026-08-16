@@ -11,14 +11,14 @@ const posts = [
     slug: "welcome-to-genelo-ai",
     title: "Welcome to Genelo AI",
     excerpt:
-      "An introduction to Genelo AI — what it does, who built it, and where it's going. Genelo AI combines chat, coding help, research, image generation and calculations in one fast, mobile-friendly interface.",
+      "An introduction to Genelo AI — what it does, who built it, and where it's going. Genelo AI combines chat, coding help, research, image generation and calculations in one fast, mobile-frie[...]",
     date: "2026-06-24",
   },
   {
     slug: "meet-the-founder",
     title: "Meet the founder: Genelo Moses Mwazembe",
     excerpt:
-      "The story of a young Tanzanian developer from Vwawa, Songwe, building an AI platform for Africa. Learn about Genelo's education at MoCU, his mission with GNL Technology, and the community that shaped him.",
+      "The story of a young Tanzanian developer from Vwawa, Songwe, building an AI platform for Africa. Learn about Genelo's education at MoCU, his mission with GNL Technology, and the community t[...]",
     date: "2026-06-24",
   },
   {
@@ -41,6 +41,13 @@ const posts = [
     excerpt:
       "A breakdown of the free daily image limits, the TSh 1,200 Pro plan, payment options through ZenoPay and Flutterwave, and which model is best for your task.",
     date: "2026-08-06",
+  },
+  {
+    slug: "genelo-ai-indexed-on-google",
+    title: "Genelo AI is indexed on Google — features, photos and how we published",
+    excerpt:
+      "We published Genelo AI with features, founder photos and structured data so Google can index it quickly. This post explains what's included and how we made the site discoverable.",
+    date: "2026-08-16",
   },
 ];
 
