@@ -62,7 +62,14 @@ export const Route = createFileRoute("/")({
 });
 
 type Attachment = { name: string; mime: string; dataUrl?: string; kind: "image" | "file"; text?: string };
-type Msg = { role: "user" | "assistant"; content: string; image?: string; attachments?: Attachment[] };
+type ZipDownload = { fileName: string; dataUrl: string; files: string[] };
+type Msg = {
+  role: "user" | "assistant";
+  content: string;
+  image?: string;
+  attachments?: Attachment[];
+  downloads?: ZipDownload[];
+};
 type Profile = { plan: string; display_name?: string | null; avatar_url?: string | null; email?: string | null };
 
 function HomePage() {
