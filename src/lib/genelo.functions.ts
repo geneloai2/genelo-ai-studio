@@ -324,7 +324,9 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
       ...data.messages,
     ];
 
-    for (let step = 0; step < 4; step++) {
+    const downloads: { fileName: string; dataUrl: string; files: string[] }[] = [];
+
+    for (let step = 0; step < 8; step++) {
       const resp = await fetch(AI_URL, {
         method: "POST",
         headers: {
@@ -354,15 +356,27 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
         | undefined;
 
       if (!calls?.length) {
-        return { ok: true as const, content: (msg?.content as string) ?? "" };
+        return {
+          ok: true as const,
+          content: (msg?.content as string) ?? "",
+          downloads,
+        };
       }
 
       convo.push(msg);
       const { searchWeb, fetchDocument } = await import("./web-tools.server");
       const { adminStats, adminListUsers } = await import("./admin-ai.server");
       const results = await Promise.all(
-        calls.slice(0, 4).map(async (c) => {
-          let args: { query?: string; pdfOnly?: boolean; url?: string; q?: string; limit?: number } = {};
+        calls.slice(0, 6).map(async (c) => {
+          let args: {
+            query?: string;
+            pdfOnly?: boolean;
+            url?: string;
+            q?: string;
+            limit?: number;
+            name?: string;
+            files?: { path: string; content: string }[];
+          } = {};
           try {
             args = JSON.parse(c.function.arguments || "{}");
           } catch {
@@ -373,6 +387,43 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
               return { id: c.id, out: await searchWeb(args.query, { pdfOnly: !!args.pdfOnly }) };
             if (c.function.name === "fetch_document" && args.url)
               return { id: c.id, out: await fetchDocument(args.url) };
+            if (c.function.name === "create_zip") {
+              if (!authedUserId)
+                return {
+                  id: c.id,
+                  out: { ok: false, error: "User must sign in to download zip files." },
+                };
+              if (!args.files?.length)
+                return { id: c.id, out: { ok: false, error: "No files provided." } };
+              const { buildZip, checkZipQuota } = await import("./zip.server");
+              const quota = await checkZipQuota(authedUserId, profile?.plan === "pro");
+              if (!quota.allowed)
+                return {
+                  id: c.id,
+                  out: {
+                    ok: false,
+                    error: `Daily zip limit reached (${quota.limit} per day on the ${
+                      profile?.plan === "pro" ? "Pro" : "Free"
+                    } plan). Tell the user kindly and suggest Genelo Pro for more.`,
+                  },
+                };
+              const zip = buildZip(args.name ?? "genelo-project", args.files);
+              if (!zip.ok) return { id: c.id, out: zip };
+              await quota.commit();
+              downloads.push({ fileName: zip.fileName, dataUrl: zip.dataUrl, files: zip.files });
+              return {
+                id: c.id,
+                out: {
+                  ok: true,
+                  fileName: zip.fileName,
+                  files: zip.files,
+                  bytes: zip.bytes,
+                  zipsUsedToday: quota.used + 1,
+                  dailyLimit: quota.limit,
+                  note: "Zip created. A download button is shown under your reply — do not paste any link.",
+                },
+              };
+            }
             if (isAdmin && c.function.name === "admin_stats")
               return { id: c.id, out: await adminStats() };
             if (isAdmin && c.function.name === "admin_list_users")
