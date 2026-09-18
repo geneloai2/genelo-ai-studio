@@ -960,6 +960,31 @@ function Bubble({
             className="mt-3 max-h-96 rounded-lg border border-border"
           />
         )}
+        {msg.downloads && msg.downloads.length > 0 && (
+          <div className="mt-3 space-y-2">
+            {msg.downloads.map((d, i) => (
+              <div key={i} className="rounded-xl border border-border bg-card p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <FileText className="h-4 w-4 flex-shrink-0 text-genelo" />
+                    <span className="truncate text-sm font-medium">{d.fileName}</span>
+                  </div>
+                  <a
+                    href={d.dataUrl}
+                    download={d.fileName}
+                    className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-full bg-genelo px-3 py-1.5 text-xs font-semibold text-genelo-foreground hover:opacity-90"
+                  >
+                    <Download className="h-3.5 w-3.5" /> Download ZIP
+                  </a>
+                </div>
+                <p className="mt-2 text-[11px] text-muted-foreground">
+                  {d.files.length} file{d.files.length === 1 ? "" : "s"} · {d.files.slice(0, 6).join(", ")}
+                  {d.files.length > 6 ? "…" : ""}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
         {suggestions.length > 0 && onSuggestion && (
           <div className="mt-3 flex flex-wrap gap-2">
             {suggestions.map((s) => (
