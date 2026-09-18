@@ -191,6 +191,7 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
         const { data: claimsData } = await supabase.auth.getClaims(token);
         const userId = claimsData?.claims?.sub;
         if (userId) {
+          authedUserId = userId;
           const [{ data: row }, { data: roleRow }] = await Promise.all([
             supabase
               .from("profiles")
