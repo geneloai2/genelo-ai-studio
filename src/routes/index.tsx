@@ -588,7 +588,7 @@ function HomePage() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-30 flex w-[260px] flex-col border-r border-border bg-muted/40 transition-transform md:static md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-30 flex w-[260px] flex-col border-r border-border bg-card shadow-xl transition-transform md:static md:shadow-none md:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
