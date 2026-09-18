@@ -62,7 +62,14 @@ export const Route = createFileRoute("/")({
 });
 
 type Attachment = { name: string; mime: string; dataUrl?: string; kind: "image" | "file"; text?: string };
-type Msg = { role: "user" | "assistant"; content: string; image?: string; attachments?: Attachment[] };
+type ZipDownload = { fileName: string; dataUrl: string; files: string[] };
+type Msg = {
+  role: "user" | "assistant";
+  content: string;
+  image?: string;
+  attachments?: Attachment[];
+  downloads?: ZipDownload[];
+};
 type Profile = { plan: string; display_name?: string | null; avatar_url?: string | null; email?: string | null };
 
 function HomePage() {
@@ -348,7 +355,10 @@ function HomePage() {
           toast.error(r.error);
           finalMessages = [...baseMessages, { role: "assistant", content: `⚠️ ${r.error}` }];
         } else {
-          finalMessages = [...baseMessages, { role: "assistant", content: r.content }];
+          finalMessages = [
+            ...baseMessages,
+            { role: "assistant", content: r.content, downloads: r.downloads ?? [] },
+          ];
           speak(r.content);
         }
         setMessages(finalMessages);
@@ -578,7 +588,7 @@ function HomePage() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-30 flex w-[260px] flex-col border-r border-border bg-muted/40 transition-transform md:static md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-30 flex w-[260px] flex-col border-r border-border bg-card shadow-xl transition-transform md:static md:shadow-none md:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -907,21 +917,21 @@ function Bubble({
   if (isUser) {
     return (
       <div className="group flex justify-end">
-        <div className="relative max-w-[85%] rounded-2xl bg-foreground px-4 py-3 text-background">
+        <div className="relative max-w-[85%] rounded-3xl rounded-br-md border border-genelo/30 bg-genelo px-4 py-3 text-genelo-foreground shadow-sm">
           {msg.attachments && msg.attachments.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-2">
               {msg.attachments.map((a, i) =>
                 a.kind === "image" && a.dataUrl ? (
                   <img key={i} src={a.dataUrl} alt={a.name} className="h-20 w-20 rounded-md object-cover" />
                 ) : (
-                  <div key={i} className="flex items-center gap-1 rounded-md bg-background/10 px-2 py-1 text-xs">
+                  <div key={i} className="flex items-center gap-1 rounded-md bg-genelo-foreground/15 px-2 py-1 text-xs">
                     <FileText className="h-3 w-3" /> {a.name}
                   </div>
                 ),
               )}
             </div>
           )}
-          <p className="whitespace-pre-wrap pr-6 text-sm">{msg.content}</p>
+          <p className="whitespace-pre-wrap pr-6 text-sm leading-relaxed">{msg.content}</p>
           <button
             onClick={copy}
             className="absolute -left-9 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-muted-foreground transition-opacity hover:bg-muted md:opacity-0 md:group-hover:opacity-100"
@@ -949,6 +959,31 @@ function Bubble({
             alt="Generated"
             className="mt-3 max-h-96 rounded-lg border border-border"
           />
+        )}
+        {msg.downloads && msg.downloads.length > 0 && (
+          <div className="mt-3 space-y-2">
+            {msg.downloads.map((d, i) => (
+              <div key={i} className="rounded-xl border border-border bg-card p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <FileText className="h-4 w-4 flex-shrink-0 text-genelo" />
+                    <span className="truncate text-sm font-medium">{d.fileName}</span>
+                  </div>
+                  <a
+                    href={d.dataUrl}
+                    download={d.fileName}
+                    className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-full bg-genelo px-3 py-1.5 text-xs font-semibold text-genelo-foreground hover:opacity-90"
+                  >
+                    <Download className="h-3.5 w-3.5" /> Download ZIP
+                  </a>
+                </div>
+                <p className="mt-2 text-[11px] text-muted-foreground">
+                  {d.files.length} file{d.files.length === 1 ? "" : "s"} · {d.files.slice(0, 6).join(", ")}
+                  {d.files.length > 6 ? "…" : ""}
+                </p>
+              </div>
+            ))}
+          </div>
         )}
         {suggestions.length > 0 && onSuggestion && (
           <div className="mt-3 flex flex-wrap gap-2">

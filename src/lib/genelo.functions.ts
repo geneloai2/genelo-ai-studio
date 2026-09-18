@@ -109,6 +109,14 @@ RESEARCH TOOLS (you can read the public web and public PDFs):
 - \`fetch_document\` — open any public URL and read it. It extracts the real text of PDFs as well as web pages.
 Use these tools whenever the answer depends on facts you are not sure about, on a specific institution's document, on dates/fees/deadlines, on recent events, or when the user gives you a link. Search first, then fetch the 1–3 most relevant documents and answer from their actual content, quoting key figures and stating the document name and date. If a PDF is a scanned image with no text, say so and suggest another source. Never invent contents of a document you did not read, and always list the real URLs you opened under "📚 References".
 
+DEEP RESEARCH & DEEP ANALYSIS (use for hard, factual, comparative or data questions):
+- Run 2–4 DIFFERENT \`search_web\` queries (rephrase, add the year, add the institution name, add "filetype:pdf") instead of one, then \`fetch_document\` the 2–4 strongest sources, including at least one primary/official source when one exists.
+- Cross-check facts across sources. If sources disagree, say so and state which one is more authoritative and why.
+- For data/numbers: show the working, compute carefully, and present results in a markdown table with units and dates.
+- Close deep answers with a short "🔍 Deep analysis" section: what the evidence shows, confidence level, and what is still uncertain.
+
+ZIP / PROJECT DELIVERY (\`create_zip\`): when the user asks for files, a project, "give me the PHP files", a starter kit, a template or a downloadable zip, WRITE the complete real file contents and call \`create_zip\` with a sensible project name and a full file list (e.g. index.php, config/db.php, assets/style.css, README.md). Never ship placeholder or truncated files. After the tool succeeds, briefly describe the folder structure and tell the user the download button is right below your reply. Free plan users get 3 zips per day, Pro users get 6 — if the tool says the limit is reached, say so kindly and suggest upgrading to Genelo Pro (TSh 1,200/month).
+
 Remember the full conversation context and continue naturally from previous turns. Never wrap your whole response in a code block. Be concise but generous — quality over filler.`;
 
 
@@ -163,6 +171,7 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
 
     let profile: { plan: string; display_name?: string | null; email?: string | null } | null = null;
     let isAdmin = false;
+    let authedUserId: string | undefined;
     const authHeader = getRequest()?.headers.get("authorization");
     const token = authHeader?.startsWith("Bearer ") ? authHeader.replace("Bearer ", "") : undefined;
 
@@ -182,6 +191,7 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
         const { data: claimsData } = await supabase.auth.getClaims(token);
         const userId = claimsData?.claims?.sub;
         if (userId) {
+          authedUserId = userId;
           const [{ data: row }, { data: roleRow }] = await Promise.all([
             supabase
               .from("profiles")
@@ -249,6 +259,35 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
           },
         },
       },
+      {
+        type: "function",
+        function: {
+          name: "create_zip",
+          description:
+            "Package complete generated project files into a downloadable .zip archive for the user. Use when the user asks for files, a project, a template or a zip download.",
+          parameters: {
+            type: "object",
+            properties: {
+              name: { type: "string", description: "Project / zip name, e.g. php-login-system" },
+              files: {
+                type: "array",
+                description: "Complete files to include",
+                items: {
+                  type: "object",
+                  properties: {
+                    path: { type: "string", description: "Relative path, e.g. src/index.php" },
+                    content: { type: "string", description: "Full file content" },
+                  },
+                  required: ["path", "content"],
+                  additionalProperties: false,
+                },
+              },
+            },
+            required: ["name", "files"],
+            additionalProperties: false,
+          },
+        },
+      },
       ...(isAdmin
         ? [
             {
@@ -285,7 +324,9 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
       ...data.messages,
     ];
 
-    for (let step = 0; step < 4; step++) {
+    const downloads: { fileName: string; dataUrl: string; files: string[] }[] = [];
+
+    for (let step = 0; step < 8; step++) {
       const resp = await fetch(AI_URL, {
         method: "POST",
         headers: {
@@ -315,15 +356,27 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
         | undefined;
 
       if (!calls?.length) {
-        return { ok: true as const, content: (msg?.content as string) ?? "" };
+        return {
+          ok: true as const,
+          content: (msg?.content as string) ?? "",
+          downloads,
+        };
       }
 
       convo.push(msg);
       const { searchWeb, fetchDocument } = await import("./web-tools.server");
       const { adminStats, adminListUsers } = await import("./admin-ai.server");
       const results = await Promise.all(
-        calls.slice(0, 4).map(async (c) => {
-          let args: { query?: string; pdfOnly?: boolean; url?: string; q?: string; limit?: number } = {};
+        calls.slice(0, 6).map(async (c) => {
+          let args: {
+            query?: string;
+            pdfOnly?: boolean;
+            url?: string;
+            q?: string;
+            limit?: number;
+            name?: string;
+            files?: { path: string; content: string }[];
+          } = {};
           try {
             args = JSON.parse(c.function.arguments || "{}");
           } catch {
@@ -334,6 +387,43 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
               return { id: c.id, out: await searchWeb(args.query, { pdfOnly: !!args.pdfOnly }) };
             if (c.function.name === "fetch_document" && args.url)
               return { id: c.id, out: await fetchDocument(args.url) };
+            if (c.function.name === "create_zip") {
+              if (!authedUserId)
+                return {
+                  id: c.id,
+                  out: { ok: false, error: "User must sign in to download zip files." },
+                };
+              if (!args.files?.length)
+                return { id: c.id, out: { ok: false, error: "No files provided." } };
+              const { buildZip, checkZipQuota } = await import("./zip.server");
+              const quota = await checkZipQuota(authedUserId, profile?.plan === "pro");
+              if (!quota.allowed)
+                return {
+                  id: c.id,
+                  out: {
+                    ok: false,
+                    error: `Daily zip limit reached (${quota.limit} per day on the ${
+                      profile?.plan === "pro" ? "Pro" : "Free"
+                    } plan). Tell the user kindly and suggest Genelo Pro for more.`,
+                  },
+                };
+              const zip = buildZip(args.name ?? "genelo-project", args.files);
+              if (!zip.ok) return { id: c.id, out: zip };
+              await quota.commit();
+              downloads.push({ fileName: zip.fileName, dataUrl: zip.dataUrl, files: zip.files });
+              return {
+                id: c.id,
+                out: {
+                  ok: true,
+                  fileName: zip.fileName,
+                  files: zip.files,
+                  bytes: zip.bytes,
+                  zipsUsedToday: quota.used + 1,
+                  dailyLimit: quota.limit,
+                  note: "Zip created. A download button is shown under your reply — do not paste any link.",
+                },
+              };
+            }
             if (isAdmin && c.function.name === "admin_stats")
               return { id: c.id, out: await adminStats() };
             if (isAdmin && c.function.name === "admin_list_users")
