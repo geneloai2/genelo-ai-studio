@@ -171,6 +171,7 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
 
     let profile: { plan: string; display_name?: string | null; email?: string | null } | null = null;
     let isAdmin = false;
+    let authedUserId: string | undefined;
     const authHeader = getRequest()?.headers.get("authorization");
     const token = authHeader?.startsWith("Bearer ") ? authHeader.replace("Bearer ", "") : undefined;
 
