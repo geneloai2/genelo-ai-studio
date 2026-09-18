@@ -259,6 +259,35 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
           },
         },
       },
+      {
+        type: "function",
+        function: {
+          name: "create_zip",
+          description:
+            "Package complete generated project files into a downloadable .zip archive for the user. Use when the user asks for files, a project, a template or a zip download.",
+          parameters: {
+            type: "object",
+            properties: {
+              name: { type: "string", description: "Project / zip name, e.g. php-login-system" },
+              files: {
+                type: "array",
+                description: "Complete files to include",
+                items: {
+                  type: "object",
+                  properties: {
+                    path: { type: "string", description: "Relative path, e.g. src/index.php" },
+                    content: { type: "string", description: "Full file content" },
+                  },
+                  required: ["path", "content"],
+                  additionalProperties: false,
+                },
+              },
+            },
+            required: ["name", "files"],
+            additionalProperties: false,
+          },
+        },
+      },
       ...(isAdmin
         ? [
             {
