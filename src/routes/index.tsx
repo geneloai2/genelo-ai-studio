@@ -917,21 +917,21 @@ function Bubble({
   if (isUser) {
     return (
       <div className="group flex justify-end">
-        <div className="relative max-w-[85%] rounded-2xl bg-foreground px-4 py-3 text-background">
+        <div className="relative max-w-[85%] rounded-3xl rounded-br-md border border-genelo/30 bg-genelo px-4 py-3 text-genelo-foreground shadow-sm">
           {msg.attachments && msg.attachments.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-2">
               {msg.attachments.map((a, i) =>
                 a.kind === "image" && a.dataUrl ? (
                   <img key={i} src={a.dataUrl} alt={a.name} className="h-20 w-20 rounded-md object-cover" />
                 ) : (
-                  <div key={i} className="flex items-center gap-1 rounded-md bg-background/10 px-2 py-1 text-xs">
+                  <div key={i} className="flex items-center gap-1 rounded-md bg-genelo-foreground/15 px-2 py-1 text-xs">
                     <FileText className="h-3 w-3" /> {a.name}
                   </div>
                 ),
               )}
             </div>
           )}
-          <p className="whitespace-pre-wrap pr-6 text-sm">{msg.content}</p>
+          <p className="whitespace-pre-wrap pr-6 text-sm leading-relaxed">{msg.content}</p>
           <button
             onClick={copy}
             className="absolute -left-9 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-muted-foreground transition-opacity hover:bg-muted md:opacity-0 md:group-hover:opacity-100"
