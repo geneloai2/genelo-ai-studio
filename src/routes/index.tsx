@@ -348,7 +348,10 @@ function HomePage() {
           toast.error(r.error);
           finalMessages = [...baseMessages, { role: "assistant", content: `⚠️ ${r.error}` }];
         } else {
-          finalMessages = [...baseMessages, { role: "assistant", content: r.content }];
+          finalMessages = [
+            ...baseMessages,
+            { role: "assistant", content: r.content, downloads: r.downloads ?? [] },
+          ];
           speak(r.content);
         }
         setMessages(finalMessages);
