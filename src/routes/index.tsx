@@ -429,6 +429,21 @@ function HomePage() {
     navigate({ to: "/", search: {} as any });
   }
 
+  async function openChat(id: string) {
+    setSidebarOpen(false);
+    if (id === chatId) return;
+    try {
+      const r = await getChatFn({ data: { id } });
+      if (r.chat) {
+        setChatId(r.chat.id);
+        setMessages((r.chat.messages as Msg[]) ?? []);
+        navigate({ to: "/", search: { chat: id } as any });
+      }
+    } catch {
+      toast.error("Could not open that chat.");
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
