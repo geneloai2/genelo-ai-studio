@@ -429,6 +429,21 @@ function HomePage() {
     navigate({ to: "/", search: {} as any });
   }
 
+  async function openChat(id: string) {
+    setSidebarOpen(false);
+    if (id === chatId) return;
+    try {
+      const r = await getChatFn({ data: { id } });
+      if (r.chat) {
+        setChatId(r.chat.id);
+        setMessages((r.chat.messages as Msg[]) ?? []);
+        navigate({ to: "/", search: { chat: id } as any });
+      }
+    } catch {
+      toast.error("Could not open that chat.");
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -662,23 +677,27 @@ function HomePage() {
             <ul className="space-y-0.5">
               {chats.map((c) => (
                 <li key={c.id}>
-                  <Link
-                    to="/"
-                    search={{ chat: c.id } as any}
-                    onClick={() => setSidebarOpen(false)}
-                    className={`group flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm hover:bg-background ${
+                  <div
+                    className={`group flex items-center justify-between gap-2 rounded-lg pr-1 text-sm hover:bg-background ${
                       chatId === c.id ? "bg-background" : ""
                     }`}
                   >
-                    <span className="truncate">{c.title}</span>
                     <button
+                      type="button"
+                      onClick={() => openChat(c.id)}
+                      className="min-w-0 flex-1 truncate px-3 py-2 text-left"
+                    >
+                      {c.title}
+                    </button>
+                    <button
+                      type="button"
                       onClick={(e) => removeChat(c.id, e)}
-                      className="rounded p-1 text-muted-foreground opacity-0 hover:text-destructive group-hover:opacity-100"
+                      className="rounded p-1 text-muted-foreground hover:text-destructive md:opacity-0 md:group-hover:opacity-100"
                       aria-label="Delete chat"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
-                  </Link>
+                  </div>
                 </li>
               ))}
             </ul>

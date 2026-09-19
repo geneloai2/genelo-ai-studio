@@ -52,6 +52,8 @@ export const Route = createFileRoute("/admin")({
 type Overview = Awaited<ReturnType<typeof getAdminOverview>>;
 type UserRow = Awaited<ReturnType<typeof listUsers>>["users"][number];
 
+const APK_URL = "https://drive.google.com/file/d/1PHL7ek6zEwz0rY21PfztwdI1IRGpBTfW/view?usp=drivesdk";
+
 const NAV: { section?: string; items: { label: string; icon: React.ReactNode }[] }[] = [
   {
     items: [
@@ -212,6 +214,14 @@ function AdminPage() {
     return `${x},${y}`;
   });
 
+  const showMetrics = ["Overview", "Insights", "Performance", "Plans", "Achievements"].includes(active);
+  const showChart = ["Overview", "Insights", "Performance", "Core AI vitals"].includes(active);
+  const showGrant = ["Overview", "Users", "Settings"].includes(active);
+  const showUsers = ["Overview", "Users", "User inspection", "Plans", "Suspensions"].includes(active);
+  const showLinks = active === "Links";
+
+
+
   return (
     <div className="min-h-screen bg-background">
       <Toaster richColors position="top-center" />
@@ -335,6 +345,7 @@ function AdminPage() {
           </div>
 
           {/* Metric tiles — Search Console style */}
+          {showMetrics && (
           <section className="grid grid-cols-2 overflow-hidden rounded-xl border border-border lg:grid-cols-4">
             <Tile
               label="Total users"
@@ -361,8 +372,10 @@ function AdminPage() {
               tone="orange"
             />
           </section>
+          )}
 
           {/* Chart */}
+          {showChart && (
           <section className="mt-4 rounded-xl border border-border p-4">
             <div className="flex items-center justify-between">
               <h2 className="text-sm text-muted-foreground">Image generations · last 7 days</h2>
@@ -392,8 +405,60 @@ function AdminPage() {
               ))}
             </div>
           </section>
+          )}
+
+          {showLinks && (
+            <section className="rounded-xl border border-border p-4">
+              <h2 className="text-sm font-medium">Genelo links</h2>
+              <ul className="mt-3 space-y-2 text-sm">
+                {[
+                  ["Genelo AI", "https://geneloai.lovable.app"],
+                  ["Genelo Pay", "https://genelopay.lovable.app"],
+                  ["Genelo Shop", "https://geneloshop.lovable.app"],
+                  ["Android APK", APK_URL],
+                ].map(([label, href]) => (
+                  <li key={label}>
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-genelo hover:underline"
+                    >
+                      <Link2 className="h-4 w-4" /> {label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {active === "Achievements" && (
+            <section className="mt-4 rounded-xl border border-border p-4 text-sm">
+              <h2 className="font-medium">Milestones</h2>
+              <ul className="mt-3 space-y-1.5 text-muted-foreground">
+                <li>👥 {totals?.users ?? 0} registered accounts</li>
+                <li>👑 {totals?.pro ?? 0} Pro subscribers ({proRate.toFixed(1)}% conversion)</li>
+                <li>🖼️ {totals?.imagesToday ?? 0} images generated today</li>
+              </ul>
+            </section>
+          )}
+
+          {active === "Suspensions" && (
+            <section className="mb-4 rounded-xl border border-border p-4 text-sm text-muted-foreground">
+              No suspended accounts. Revoke Pro or admin rights from the table below when needed.
+            </section>
+          )}
+
+          {active === "Core AI vitals" && (
+            <section className="mt-4 grid gap-3 rounded-xl border border-border p-4 text-sm sm:grid-cols-3">
+              <div><div className="text-muted-foreground">Chat modes</div><div className="mt-1 text-2xl">4</div></div>
+              <div><div className="text-muted-foreground">Free images / day</div><div className="mt-1 text-2xl">3–10</div></div>
+              <div><div className="text-muted-foreground">Zips / day</div><div className="mt-1 text-2xl">3–6</div></div>
+            </section>
+          )}
 
           {/* Grant admin */}
+          {showGrant && (
           <section className="mt-4 rounded-xl border border-border p-4">
             <h2 className="flex items-center gap-2 text-sm font-medium">
               <Plus className="h-4 w-4" /> Grant admin by email
@@ -412,8 +477,10 @@ function AdminPage() {
             </form>
             <p className="mt-2 text-xs text-muted-foreground">The user must have signed up first.</p>
           </section>
+          )}
 
           {/* Users table */}
+          {showUsers && (
           <section className="mt-4 rounded-xl border border-border">
             <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
               <h2 className="text-sm font-medium">Users</h2>
@@ -533,6 +600,7 @@ function AdminPage() {
               </table>
             </div>
           </section>
+          )}
         </main>
       </div>
     </div>
