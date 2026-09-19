@@ -52,6 +52,8 @@ export const Route = createFileRoute("/admin")({
 type Overview = Awaited<ReturnType<typeof getAdminOverview>>;
 type UserRow = Awaited<ReturnType<typeof listUsers>>["users"][number];
 
+const APK_URL = "https://drive.google.com/file/d/1PHL7ek6zEwz0rY21PfztwdI1IRGpBTfW/view?usp=drivesdk";
+
 const NAV: { section?: string; items: { label: string; icon: React.ReactNode }[] }[] = [
   {
     items: [
