@@ -468,6 +468,10 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
             limit?: number;
             name?: string;
             files?: { path: string; content: string }[];
+            address?: string;
+            origin?: string;
+            destination?: string;
+            mode?: string;
           } = {};
           try {
             args = JSON.parse(c.function.arguments || "{}");
