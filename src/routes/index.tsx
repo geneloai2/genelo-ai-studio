@@ -72,6 +72,31 @@ type Msg = {
 };
 type Profile = { plan: string; display_name?: string | null; avatar_url?: string | null; email?: string | null };
 
+/** Turn the base64 zip into a real Blob and save it with its proper file name.
+ *  Android WebViews refuse data: URIs on <a download>, so we never use one. */
+function downloadZip(d: ZipDownload) {
+  try {
+    const base64 = d.dataUrl.split(",")[1] ?? "";
+    const bin = atob(base64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const blob = new Blob([bytes], { type: "application/zip" });
+    const name = d.fileName?.toLowerCase().endsWith(".zip") ? d.fileName : `${d.fileName || "genelo-project"}.zip`;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    a.rel = "noopener";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    toast.success(`Downloading ${name}`);
+  } catch {
+    toast.error("Could not save the zip file on this device.");
+  }
+}
+
 function HomePage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
