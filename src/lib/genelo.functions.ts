@@ -520,6 +520,18 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
                 },
               };
             }
+            if (c.function.name === "maps_geocode" && args.address) {
+              const { mapsGeocode } = await import("./maps.server");
+              return { id: c.id, out: await mapsGeocode(args.address) };
+            }
+            if (c.function.name === "maps_places" && args.query) {
+              const { mapsPlaces } = await import("./maps.server");
+              return { id: c.id, out: await mapsPlaces(args.query, args.limit ?? 6) };
+            }
+            if (c.function.name === "maps_directions" && args.origin && args.destination) {
+              const { mapsDirections } = await import("./maps.server");
+              return { id: c.id, out: await mapsDirections(args.origin, args.destination, args.mode ?? "DRIVE") };
+            }
             if (isAdmin && c.function.name === "admin_stats")
               return { id: c.id, out: await adminStats() };
             if (isAdmin && c.function.name === "admin_list_users")
