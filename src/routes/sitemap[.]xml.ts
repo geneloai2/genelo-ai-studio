@@ -7,6 +7,18 @@ export const Route = createFileRoute("/sitemap.xml")({
   server: {
     handlers: {
       GET: async () => {
+        const LOGO = `${BASE_URL}/__l5e/assets-v1/f717c15c-b7b0-4c58-9d24-077f2748f5a3/genelo-ai-logo-v3.png`;
+        const FOUNDER = `${BASE_URL}/__l5e/assets-v1/68d35b19-9dec-4b11-b4bd-3d2f1dbda74f/founder-genelo-2.jpg`;
+        const images: Record<string, { url: string; title: string }[]> = {
+          "/": [{ url: LOGO, title: "Genelo AI official logo" }],
+          "/about": [
+            { url: FOUNDER, title: "Genelo Moses Mwazembe — founder of Genelo AI" },
+            { url: LOGO, title: "Genelo AI official logo" },
+          ],
+          "/blog/meet-the-founder": [
+            { url: FOUNDER, title: "Genelo Moses Mwazembe — founder of Genelo AI" },
+          ],
+        };
         const paths = [
           { path: "/", priority: "1.0", changefreq: "weekly" },
           { path: "/about", priority: "0.9", changefreq: "monthly" },
