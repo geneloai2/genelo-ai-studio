@@ -72,6 +72,31 @@ type Msg = {
 };
 type Profile = { plan: string; display_name?: string | null; avatar_url?: string | null; email?: string | null };
 
+/** Turn the base64 zip into a real Blob and save it with its proper file name.
+ *  Android WebViews refuse data: URIs on <a download>, so we never use one. */
+function downloadZip(d: ZipDownload) {
+  try {
+    const base64 = d.dataUrl.split(",")[1] ?? "";
+    const bin = atob(base64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const blob = new Blob([bytes], { type: "application/zip" });
+    const name = d.fileName?.toLowerCase().endsWith(".zip") ? d.fileName : `${d.fileName || "genelo-project"}.zip`;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    a.rel = "noopener";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    toast.success(`Downloading ${name}`);
+  } catch {
+    toast.error("Could not save the zip file on this device.");
+  }
+}
+
 function HomePage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
@@ -988,13 +1013,13 @@ function Bubble({
                     <FileText className="h-4 w-4 flex-shrink-0 text-genelo" />
                     <span className="truncate text-sm font-medium">{d.fileName}</span>
                   </div>
-                  <a
-                    href={d.dataUrl}
-                    download={d.fileName}
+                  <button
+                    type="button"
+                    onClick={() => downloadZip(d)}
                     className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-full bg-genelo px-3 py-1.5 text-xs font-semibold text-genelo-foreground hover:opacity-90"
                   >
                     <Download className="h-3.5 w-3.5" /> Download ZIP
-                  </a>
+                  </button>
                 </div>
                 <p className="mt-2 text-[11px] text-muted-foreground">
                   {d.files.length} file{d.files.length === 1 ? "" : "s"} · {d.files.slice(0, 6).join(", ")}

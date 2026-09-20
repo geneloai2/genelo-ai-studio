@@ -7,6 +7,18 @@ export const Route = createFileRoute("/sitemap.xml")({
   server: {
     handlers: {
       GET: async () => {
+        const LOGO = `${BASE_URL}/__l5e/assets-v1/f717c15c-b7b0-4c58-9d24-077f2748f5a3/genelo-ai-logo-v3.png`;
+        const FOUNDER = `${BASE_URL}/__l5e/assets-v1/68d35b19-9dec-4b11-b4bd-3d2f1dbda74f/founder-genelo-2.jpg`;
+        const images: Record<string, { url: string; title: string }[]> = {
+          "/": [{ url: LOGO, title: "Genelo AI official logo" }],
+          "/about": [
+            { url: FOUNDER, title: "Genelo Moses Mwazembe — founder of Genelo AI" },
+            { url: LOGO, title: "Genelo AI official logo" },
+          ],
+          "/blog/meet-the-founder": [
+            { url: FOUNDER, title: "Genelo Moses Mwazembe — founder of Genelo AI" },
+          ],
+        };
         const paths = [
           { path: "/", priority: "1.0", changefreq: "weekly" },
           { path: "/about", priority: "0.9", changefreq: "monthly" },
@@ -20,12 +32,17 @@ export const Route = createFileRoute("/sitemap.xml")({
           { path: "/login", priority: "0.5", changefreq: "yearly" },
         ];
         const urls = paths
-          .map(
-            (e) =>
-              `  <url>\n    <loc>${BASE_URL}${e.path}</loc>\n    <changefreq>${e.changefreq}</changefreq>\n    <priority>${e.priority}</priority>\n  </url>`,
-          )
+          .map((e) => {
+            const imgs = (images[e.path] ?? [])
+              .map(
+                (i) =>
+                  `\n    <image:image>\n      <image:loc>${i.url}</image:loc>\n      <image:title>${i.title}</image:title>\n    </image:image>`,
+              )
+              .join("");
+            return `  <url>\n    <loc>${BASE_URL}${e.path}</loc>\n    <changefreq>${e.changefreq}</changefreq>\n    <priority>${e.priority}</priority>${imgs}\n  </url>`;
+          })
           .join("\n");
-        const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>`;
+        const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n${urls}\n</urlset>`;
         return new Response(xml, {
           headers: {
             "Content-Type": "application/xml",
