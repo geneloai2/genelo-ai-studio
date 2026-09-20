@@ -333,6 +333,53 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
           },
         },
       },
+      {
+        type: "function",
+        function: {
+          name: "maps_geocode",
+          description: "Turn an address or place name into real coordinates and a formatted address (Google Maps).",
+          parameters: {
+            type: "object",
+            properties: { address: { type: "string", description: "Address or place name" } },
+            required: ["address"],
+            additionalProperties: false,
+          },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "maps_places",
+          description:
+            "Search real places/businesses (name, address, rating, phone, website), e.g. 'pharmacies in Vwawa Songwe'.",
+          parameters: {
+            type: "object",
+            properties: {
+              query: { type: "string", description: "Place search text" },
+              limit: { type: "number", description: "Max results (1-10)" },
+            },
+            required: ["query"],
+            additionalProperties: false,
+          },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "maps_directions",
+          description: "Get real distance and travel time between two places.",
+          parameters: {
+            type: "object",
+            properties: {
+              origin: { type: "string" },
+              destination: { type: "string" },
+              mode: { type: "string", description: "DRIVE, WALK, BICYCLE, TRANSIT or TWO_WHEELER" },
+            },
+            required: ["origin", "destination"],
+            additionalProperties: false,
+          },
+        },
+      },
       ...(isAdmin
         ? [
             {
