@@ -32,12 +32,17 @@ export const Route = createFileRoute("/sitemap.xml")({
           { path: "/login", priority: "0.5", changefreq: "yearly" },
         ];
         const urls = paths
-          .map(
-            (e) =>
-              `  <url>\n    <loc>${BASE_URL}${e.path}</loc>\n    <changefreq>${e.changefreq}</changefreq>\n    <priority>${e.priority}</priority>\n  </url>`,
-          )
+          .map((e) => {
+            const imgs = (images[e.path] ?? [])
+              .map(
+                (i) =>
+                  `\n    <image:image>\n      <image:loc>${i.url}</image:loc>\n      <image:title>${i.title}</image:title>\n    </image:image>`,
+              )
+              .join("");
+            return `  <url>\n    <loc>${BASE_URL}${e.path}</loc>\n    <changefreq>${e.changefreq}</changefreq>\n    <priority>${e.priority}</priority>${imgs}\n  </url>`;
+          })
           .join("\n");
-        const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>`;
+        const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n${urls}\n</urlset>`;
         return new Response(xml, {
           headers: {
             "Content-Type": "application/xml",
