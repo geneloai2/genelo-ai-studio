@@ -988,13 +988,13 @@ function Bubble({
                     <FileText className="h-4 w-4 flex-shrink-0 text-genelo" />
                     <span className="truncate text-sm font-medium">{d.fileName}</span>
                   </div>
-                  <a
-                    href={d.dataUrl}
-                    download={d.fileName}
+                  <button
+                    type="button"
+                    onClick={() => downloadZip(d)}
                     className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-full bg-genelo px-3 py-1.5 text-xs font-semibold text-genelo-foreground hover:opacity-90"
                   >
                     <Download className="h-3.5 w-3.5" /> Download ZIP
-                  </a>
+                  </button>
                 </div>
                 <p className="mt-2 text-[11px] text-muted-foreground">
                   {d.files.length} file{d.files.length === 1 ? "" : "s"} · {d.files.slice(0, 6).join(", ")}
