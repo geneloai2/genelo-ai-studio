@@ -120,3 +120,117 @@ export async function searchWeb(query: string, opts?: { pdfOnly?: boolean }) {
     return { ok: false as const, error: `Search error: ${(e as Error).message}` };
   }
 }
+
+/* ------------------------------------------------------------------ *
+ * Image search (public web) — used to show real matching pictures.
+ * ------------------------------------------------------------------ */
+export async function searchImages(query: string, limit = 8) {
+  try {
+    const tokenRes = await fetch(
+      `https://duckduckgo.com/?q=${encodeURIComponent(query)}&iax=images&ia=images`,
+      { headers: { "User-Agent": SEARCH_UA, Accept: "text/html" } },
+    );
+    const html = await tokenRes.text();
+    const vqd =
+      /vqd=["']?([-\w]+)["']?/.exec(html)?.[1] ?? /vqd=([\d-]+)&/.exec(html)?.[1];
+    if (!vqd) return { ok: false as const, error: "Image search is unavailable right now." };
+
+    const res = await fetch(
+      `https://duckduckgo.com/i.js?l=us-en&o=json&q=${encodeURIComponent(query)}&vqd=${vqd}&f=,,,&p=1`,
+      {
+        headers: {
+          "User-Agent": SEARCH_UA,
+          Accept: "application/json",
+          Referer: "https://duckduckgo.com/",
+        },
+      },
+    );
+    if (!res.ok) return { ok: false as const, error: `Image search failed (${res.status}).` };
+    const json = (await res.json()) as { results?: any[] };
+    const images = (json.results ?? [])
+      .filter((r) => typeof r.image === "string" && /^https?:\/\//.test(r.image))
+      .slice(0, Math.min(Math.max(limit, 1), 12))
+      .map((r) => ({
+        title: String(r.title ?? "").slice(0, 160),
+        image: r.image as string,
+        thumbnail: (r.thumbnail as string) ?? (r.image as string),
+        source: (r.url as string) ?? "",
+        width: r.width,
+        height: r.height,
+      }));
+    if (!images.length) return { ok: false as const, error: "No matching pictures found." };
+    return { ok: true as const, query, images };
+  } catch (e) {
+    return { ok: false as const, error: `Image search error: ${(e as Error).message}` };
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Person / name lookup — tries many angles until something matches.
+ * ------------------------------------------------------------------ */
+const PHONE_RE =
+  /(?:\+|00)?(?:255|254|256|1|44|91|27|260|265)?[\s-]?\(?\d{2,4}\)?[\s-]?\d{3}[\s-]?\d{3,4}/g;
+
+function extractContacts(text: string) {
+  const phones = new Set<string>();
+  for (const raw of text.match(PHONE_RE) ?? []) {
+    const digits = raw.replace(/[^\d+]/g, "");
+    if (digits.replace(/\D/g, "").length >= 9 && digits.replace(/\D/g, "").length <= 15)
+      phones.add(digits);
+  }
+  const whatsapp = new Set<string>();
+  for (const m of text.matchAll(/(?:wa\.me|api\.whatsapp\.com\/send\?phone=)\/?(\+?\d{8,15})/gi))
+    whatsapp.add(m[1]);
+  const emails = new Set(
+    (text.match(/[\w.+-]+@[\w-]+\.[\w.]{2,}/g) ?? []).map((e) => e.toLowerCase()),
+  );
+  return {
+    phones: [...phones].slice(0, 8),
+    whatsapp: [...whatsapp].slice(0, 5),
+    emails: [...emails].slice(0, 8),
+  };
+}
+
+export async function findPerson(name: string, hint?: string) {
+  const base = hint ? `${name} ${hint}` : name;
+  const queries = [
+    `"${name}"${hint ? ` ${hint}` : ""}`,
+    `${base} linkedin OR facebook OR instagram OR twitter`,
+    `${base} contact phone OR whatsapp OR email`,
+    `${base} profile biography about`,
+    `${base} site:linkedin.com OR site:facebook.com OR site:instagram.com`,
+  ];
+  const searches = await Promise.all(queries.map((q) => searchWeb(q)));
+  const seen = new Set<string>();
+  const results: { title: string; url: string; snippet: string }[] = [];
+  for (const s of searches) {
+    if (!s.ok) continue;
+    for (const r of s.results) {
+      if (seen.has(r.url)) continue;
+      seen.add(r.url);
+      results.push(r);
+    }
+  }
+  if (!results.length)
+    return { ok: false as const, error: `No public trace found for "${name}". Ask the user for a hint (city, company, school, username).` };
+
+  // Read the 3 strongest pages for contacts.
+  const pages = await Promise.all(results.slice(0, 3).map((r) => fetchDocument(r.url)));
+  const blob = [
+    ...results.map((r) => `${r.title} ${r.snippet} ${r.url}`),
+    ...pages.map((p) => (p.ok ? p.text : "")),
+  ].join("\n");
+  const contacts = extractContacts(blob);
+  const images = await searchImages(`${base} photo`, 6);
+
+  return {
+    ok: true as const,
+    name,
+    queriesTried: queries,
+    results: results.slice(0, 12),
+    contacts,
+    whatsappLinks: contacts.whatsapp.map((p) => `https://wa.me/${p.replace(/\D/g, "")}`),
+    pictures: images.ok ? images.images : [],
+    note: "Verify identity before trusting a match; several people can share a name.",
+  };
+}
