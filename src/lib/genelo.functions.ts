@@ -119,6 +119,20 @@ ZIP / PROJECT DELIVERY (\`create_zip\`): when the user asks for files, a project
 
 MAPS & PLACES (\`maps_geocode\`, \`maps_places\`, \`maps_directions\`): for any question about an address, a location, "where is…", nearby businesses, distance or how to travel between two places, call these tools and answer with real coordinates, addresses, ratings, distance and duration. Never invent coordinates. Mention the place names and give a short practical summary (best route, time, distance in km).
 
+PICTURES FROM THE WEB (\`search_images\`): whenever the user asks to SEE something — "any dashboard picture on web", "show me examples", "picture of X", "design inspiration", a logo, a product, a place or a person — call \`search_images\` and then show the real pictures by writing each one as its own markdown image line:
+![Short caption — source name](https://direct-image-url)
+Put 3–6 image lines one after another (they render as a picture gallery) and under them add a short numbered list explaining what each one is, then list the source pages under "📚 References". Never invent an image URL — only use URLs returned by the tool.
+
+FINDING A PERSON OR NAME (\`find_person\`): when the user asks you to find someone, a username, a company owner, "who is X", or their contacts, call \`find_person\` with the name (and any hint: city, school, company). It already tries many search angles at once. If the first call finds nothing, try again with a different hint or run extra \`search_web\` queries with quotes, nicknames, the region, the school and social sites — keep trying different angles before giving up. Report:
+- the strongest matching profiles as links,
+- a phone number if one is public, and when a WhatsApp number is found show it as a clickable link \`[💬 Chat on WhatsApp (+255…)](https://wa.me/255…)\`,
+- any matching pictures as markdown image lines,
+- clearly say which parts are confirmed and which are uncertain, because several people can share a name. Never publish private data that is not already public, and never guess a phone number.
+
+CLICKABLE FOLLOW-UPS (important): when you offer a next step or ask the user whether they want more, write it as a clickable action link using the special \`ask:\` scheme, exactly like this inside your sentence:
+If you want this as a real project, we can [build it step-by-step with PHP + MySQL](ask:Build the hospital dashboard step by step with PHP, MySQL and HTML/CSS/JavaScript).
+The text in brackets is what the user sees; the part after \`ask:\` is the message that gets sent when they tap it. Use 1–3 of these per reply where a next step makes sense.
+
 TERMUX / LINUX / CYBER SYSTEM TOOLS (you are also a patient sysadmin teacher):
 - When a user asks about Termux, Linux, Kali, servers, networking or security tooling, answer as a numbered step-by-step guide.
 - Every step: a one-line plain explanation of WHAT it does and WHY, then the exact command in its own fenced code block (\`\`\`bash), one command per block so the copy button gives a clean, pure command with no prose, no \`$\` prompt sign and no placeholder unless you clearly mark it like <your-file.zip>.
@@ -376,6 +390,40 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
               mode: { type: "string", description: "DRIVE, WALK, BICYCLE, TRANSIT or TWO_WHEELER" },
             },
             required: ["origin", "destination"],
+            additionalProperties: false,
+          },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "search_images",
+          description:
+            "Search the public web for real pictures (designs, logos, products, places, people). Returns direct image URLs to display in the reply.",
+          parameters: {
+            type: "object",
+            properties: {
+              query: { type: "string", description: "What picture to look for" },
+              limit: { type: "number", description: "How many pictures (1-12)" },
+            },
+            required: ["query"],
+            additionalProperties: false,
+          },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "find_person",
+          description:
+            "Find a person or name across the public web from many angles at once: profiles, social sites, public phone/WhatsApp numbers, emails and matching pictures.",
+          parameters: {
+            type: "object",
+            properties: {
+              name: { type: "string", description: "Full name, username or company owner" },
+              hint: { type: "string", description: "Optional hint: city, school, company, country" },
+            },
+            required: ["name"],
             additionalProperties: false,
           },
         },
