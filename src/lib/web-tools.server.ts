@@ -87,36 +87,194 @@ export async function fetchDocument(rawUrl: string) {
 
 export async function searchWeb(query: string, opts?: { pdfOnly?: boolean }) {
   const q = opts?.pdfOnly ? `${query} filetype:pdf` : query;
+  const strip = (x: string) =>
+    x
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/&quot;/g, '"')
+      .replace(/&#x27;|&#39;/g, "'")
+      .replace(/&nbsp;/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+  const results: { title: string; url: string; snippet: string }[] = [];
+
+  // 1) DuckDuckGo Lite (POST) — the most reliable text endpoint.
   try {
-    const res = await fetch(
-      `https://html.duckduckgo.com/html/?q=${encodeURIComponent(q)}`,
-      { headers: { "User-Agent": SEARCH_UA, Accept: "*/*" } },
-    );
-    if (!res.ok) return { ok: false as const, error: `Search failed (${res.status}).` };
-
-    const html = await res.text();
-    const strip = (s: string) => s.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-    const results: { title: string; url: string; snippet: string }[] = [];
-    const blocks = html.split(/class="result__a"/i).slice(1);
-    for (const block of blocks) {
-      if (results.length >= 8) break;
-      const hrefM = /href="([^"]+)"/i.exec(block);
-      if (!hrefM) continue;
-      let href = hrefM[1].replace(/&amp;/g, "&");
-      const uddg = /uddg=([^&]+)/.exec(href);
-      if (uddg) href = decodeURIComponent(uddg[1]);
-      if (href.startsWith("//")) href = `https:${href}`;
-      if (!/^https?:\/\//.test(href)) continue;
-      const title = strip(/>([\s\S]*?)<\/a>/i.exec(block)?.[1] ?? "");
-      const snip = strip(
-        /class="result__snippet"[^>]*>([\s\S]*?)<\/a>/i.exec(block)?.[1] ?? "",
-      );
-      results.push({ title, url: href, snippet: snip.slice(0, 300) });
+    const res = await fetch("https://lite.duckduckgo.com/lite/", {
+      method: "POST",
+      headers: {
+        "User-Agent": SEARCH_UA,
+        "Content-Type": "application/x-www-form-urlencoded",
+        Accept: "text/html",
+      },
+      body: new URLSearchParams({ q }).toString(),
+    });
+    if (res.ok) {
+      const html = await res.text();
+      const rows = html.split(/class=['"]result-link['"]/i);
+      for (let i = 1; i < rows.length && results.length < 10; i++) {
+        const before = rows[i - 1];
+        const href = /href="([^"]+)"[^>]*$/.exec(before.trimEnd())?.[1];
+        const title = strip(/^>([\s\S]*?)<\/a>/.exec(rows[i])?.[1] ?? "");
+        const snippet = strip(
+          /class=['"]result-snippet['"][^>]*>([\s\S]*?)<\/td>/i.exec(rows[i])?.[1] ?? "",
+        ).slice(0, 320);
+        if (!href || !/^https?:\/\//.test(href)) continue;
+        if (results.some((r) => r.url === href)) continue;
+        results.push({ title: title || href, url: href, snippet });
+      }
     }
-
-    if (!results.length) return { ok: false as const, error: "No results found." };
-    return { ok: true as const, query: q, results };
-  } catch (e) {
-    return { ok: false as const, error: `Search error: ${(e as Error).message}` };
+  } catch {
+    /* fall through */
   }
+
+  // 2) Fallback: classic DuckDuckGo HTML endpoint.
+  if (!results.length) {
+    try {
+      const res = await fetch(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(q)}`, {
+        headers: { "User-Agent": SEARCH_UA, Accept: "*/*" },
+      });
+      if (res.ok) {
+        const html = await res.text();
+        const blocks = html.split(/class="result__a"/i).slice(1);
+        for (const block of blocks) {
+          if (results.length >= 8) break;
+          const hrefM = /href="([^"]+)"/i.exec(block);
+          if (!hrefM) continue;
+          let href = hrefM[1].replace(/&amp;/g, "&");
+          const uddg = /uddg=([^&]+)/.exec(href);
+          if (uddg) href = decodeURIComponent(uddg[1]);
+          if (href.startsWith("//")) href = `https:${href}`;
+          if (!/^https?:\/\//.test(href)) continue;
+          results.push({
+            title: strip(/>([\s\S]*?)<\/a>/i.exec(block)?.[1] ?? ""),
+            url: href,
+            snippet: strip(
+              /class="result__snippet"[^>]*>([\s\S]*?)<\/a>/i.exec(block)?.[1] ?? "",
+            ).slice(0, 300),
+          });
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  if (!results.length) return { ok: false as const, error: "No results found." };
+  return { ok: true as const, query: q, results };
+}
+
+/* ------------------------------------------------------------------ *
+ * Image search (public web) — used to show real matching pictures.
+ * ------------------------------------------------------------------ */
+export async function searchImages(query: string, limit = 8) {
+  try {
+    const tokenRes = await fetch(
+      `https://duckduckgo.com/?q=${encodeURIComponent(query)}&iax=images&ia=images`,
+      { headers: { "User-Agent": SEARCH_UA, Accept: "text/html" } },
+    );
+    const html = await tokenRes.text();
+    const vqd =
+      /vqd=["']?([-\w]+)["']?/.exec(html)?.[1] ?? /vqd=([\d-]+)&/.exec(html)?.[1];
+    if (!vqd) return { ok: false as const, error: "Image search is unavailable right now." };
+
+    const res = await fetch(
+      `https://duckduckgo.com/i.js?l=us-en&o=json&q=${encodeURIComponent(query)}&vqd=${vqd}&f=,,,&p=1`,
+      {
+        headers: {
+          "User-Agent": SEARCH_UA,
+          Accept: "application/json",
+          Referer: "https://duckduckgo.com/",
+        },
+      },
+    );
+    if (!res.ok) return { ok: false as const, error: `Image search failed (${res.status}).` };
+    const json = (await res.json()) as { results?: any[] };
+    const images = (json.results ?? [])
+      .filter((r) => typeof r.image === "string" && /^https?:\/\//.test(r.image))
+      .slice(0, Math.min(Math.max(limit, 1), 12))
+      .map((r) => ({
+        title: String(r.title ?? "").slice(0, 160),
+        image: r.image as string,
+        thumbnail: (r.thumbnail as string) ?? (r.image as string),
+        source: (r.url as string) ?? "",
+        width: r.width,
+        height: r.height,
+      }));
+    if (!images.length) return { ok: false as const, error: "No matching pictures found." };
+    return { ok: true as const, query, images };
+  } catch (e) {
+    return { ok: false as const, error: `Image search error: ${(e as Error).message}` };
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Person / name lookup — tries many angles until something matches.
+ * ------------------------------------------------------------------ */
+const PHONE_RE =
+  /(?:\+|00)?(?:255|254|256|1|44|91|27|260|265)?[\s-]?\(?\d{2,4}\)?[\s-]?\d{3}[\s-]?\d{3,4}/g;
+
+function extractContacts(text: string) {
+  const phones = new Set<string>();
+  for (const raw of text.match(PHONE_RE) ?? []) {
+    const digits = raw.replace(/[^\d+]/g, "");
+    if (digits.replace(/\D/g, "").length >= 9 && digits.replace(/\D/g, "").length <= 15)
+      phones.add(digits);
+  }
+  const whatsapp = new Set<string>();
+  for (const m of text.matchAll(/(?:wa\.me|api\.whatsapp\.com\/send\?phone=)\/?(\+?\d{8,15})/gi))
+    whatsapp.add(m[1]);
+  const emails = new Set(
+    (text.match(/[\w.+-]+@[\w-]+\.[\w.]{2,}/g) ?? []).map((e) => e.toLowerCase()),
+  );
+  return {
+    phones: [...phones].slice(0, 8),
+    whatsapp: [...whatsapp].slice(0, 5),
+    emails: [...emails].slice(0, 8),
+  };
+}
+
+export async function findPerson(name: string, hint?: string) {
+  const base = hint ? `${name} ${hint}` : name;
+  const queries = [
+    `"${name}"${hint ? ` ${hint}` : ""}`,
+    `${base} linkedin OR facebook OR instagram OR twitter`,
+    `${base} contact phone OR whatsapp OR email`,
+    `${base} profile biography about`,
+    `${base} site:linkedin.com OR site:facebook.com OR site:instagram.com`,
+  ];
+  const searches = await Promise.all(queries.map((q) => searchWeb(q)));
+  const seen = new Set<string>();
+  const results: { title: string; url: string; snippet: string }[] = [];
+  for (const s of searches) {
+    if (!s.ok) continue;
+    for (const r of s.results) {
+      if (seen.has(r.url)) continue;
+      seen.add(r.url);
+      results.push(r);
+    }
+  }
+  if (!results.length)
+    return { ok: false as const, error: `No public trace found for "${name}". Ask the user for a hint (city, company, school, username).` };
+
+  // Read the 3 strongest pages for contacts.
+  const pages = await Promise.all(results.slice(0, 3).map((r) => fetchDocument(r.url)));
+  const blob = [
+    ...results.map((r) => `${r.title} ${r.snippet} ${r.url}`),
+    ...pages.map((p) => (p.ok ? p.text : "")),
+  ].join("\n");
+  const contacts = extractContacts(blob);
+  const images = await searchImages(`${base} photo`, 6);
+
+  return {
+    ok: true as const,
+    name,
+    queriesTried: queries,
+    results: results.slice(0, 12),
+    contacts,
+    whatsappLinks: contacts.whatsapp.map((p) => `https://wa.me/${p.replace(/\D/g, "")}`),
+    pictures: images.ok ? images.images : [],
+    note: "Verify identity before trusting a match; several people can share a name.",
+  };
 }

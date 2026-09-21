@@ -1,5 +1,6 @@
 // Rich markdown renderer with VS Code–style syntax highlighting,
 // per-code-block copy button, and favicon icons on reference links.
+import type React from "react";
 import { useMemo, useState } from "react";
 import hljs from "highlight.js";
 import "highlight.js/styles/github-dark.css";
@@ -28,6 +29,17 @@ function renderInline(s: string) {
   t = t.replace(/\*([^*]+)\*/g, "<em>$1</em>");
   // Links — handled by a wrapper component when standalone in a list (refs),
   // here we just render as plain anchor tags.
+  // Clickable follow-up actions: [label](ask:message to send)
+  t = t.replace(
+    /\[([^\]]+)\]\(ask:([^)]+)\)/g,
+    (_m, label: string, ask: string) =>
+      `<button type="button" data-ask="${ask.replace(/"/g, "&quot;")}" class="genelo-ask inline text-left font-medium text-genelo underline decoration-dotted decoration-from-font underline-offset-4 hover:opacity-80"><span class="mr-1">&#8618;</span>${label}</button>`,
+  );
+  // WhatsApp / phone links become green chips
+  t = t.replace(
+    /\[([^\]]+)\]\((https:\/\/wa\.me\/[^)]+|tel:[^)]+)\)/g,
+    '<a class="my-1 inline-flex items-center gap-1 rounded-full bg-green-500/15 px-3 py-1 text-xs font-semibold text-green-500 hover:bg-green-500/25" href="$2" target="_blank" rel="noreferrer">$1</a>',
+  );
   t = t.replace(
     /\[([^\]]+)\]\(([^)]+)\)/g,
     '<a class="text-genelo underline decoration-dotted underline-offset-2 hover:opacity-80" href="$2" target="_blank" rel="noreferrer">$1</a>',
@@ -38,6 +50,7 @@ function renderInline(s: string) {
 type Block =
   | { kind: "html"; html: string }
   | { kind: "code"; lang: string; code: string }
+  | { kind: "gallery"; images: { alt: string; src: string }[] }
   | { kind: "refs"; items: { label: string; href: string }[] };
 
 function CodeBlock({ lang, code }: { lang: string; code: string }) {
@@ -95,6 +108,44 @@ function CodeBlock({ lang, code }: { lang: string; code: string }) {
           dangerouslySetInnerHTML={{ __html: html }}
         />
       </pre>
+    </div>
+  );
+}
+
+function Gallery({ images }: { images: { alt: string; src: string }[] }) {
+  if (images.length === 1) {
+    const it = images[0];
+    return (
+      <figure className="my-3">
+        <img
+          src={it.src}
+          alt={it.alt}
+          loading="lazy"
+          className="max-h-80 w-auto rounded-xl border border-genelo/30 object-cover shadow-md"
+        />
+        {it.alt && (
+          <figcaption className="mt-1.5 text-xs italic text-muted-foreground">{it.alt}</figcaption>
+        )}
+      </figure>
+    );
+  }
+  return (
+    <div className="-mx-1 my-3 flex snap-x gap-3 overflow-x-auto px-1 pb-2">
+      {images.map((it, i) => (
+        <figure key={i} className="w-64 flex-shrink-0 snap-start">
+          <img
+            src={it.src}
+            alt={it.alt}
+            loading="lazy"
+            className="h-40 w-64 rounded-xl border border-border object-cover shadow-md"
+          />
+          {it.alt && (
+            <figcaption className="mt-1.5 line-clamp-2 text-[11px] text-muted-foreground">
+              {it.alt}
+            </figcaption>
+          )}
+        </figure>
+      ))}
     </div>
   );
 }
@@ -199,17 +250,28 @@ function parseBlocks(content: string): Block[] {
       continue;
     }
 
-    // Standalone image: ![alt](url)
+    // Standalone image(s): consecutive ![alt](url) lines render as a gallery
     const imgMatch = line.match(/^!\[([^\]]*)\]\(([^)]+)\)\s*$/);
     if (imgMatch) {
       flushBuffer();
-      const alt = escape(imgMatch[1]);
-      const src = imgMatch[2];
-      blocks.push({
-        kind: "html",
-        html: `<figure class="my-3"><img src="${src}" alt="${alt}" loading="lazy" class="max-h-80 w-auto rounded-xl border border-genelo/30 shadow-md object-cover" />${alt ? `<figcaption class="mt-1.5 text-xs italic text-muted-foreground">${alt}</figcaption>` : ""}</figure>`,
-      });
-      i++;
+      const imgs: { alt: string; src: string }[] = [];
+      while (i < lines.length) {
+        const m = lines[i].match(/^!\[([^\]]*)\]\(([^)]+)\)\s*$/);
+        if (m) {
+          imgs.push({ alt: m[1], src: m[2] });
+          i++;
+          continue;
+        }
+        if (lines[i].trim() === "" && imgs.length > 0) {
+          const next = lines[i + 1] ?? "";
+          if (/^!\[([^\]]*)\]\(([^)]+)\)\s*$/.test(next)) {
+            i++;
+            continue;
+          }
+        }
+        break;
+      }
+      blocks.push({ kind: "gallery", images: imgs });
       continue;
     }
 
@@ -235,12 +297,26 @@ function parseBlocks(content: string): Block[] {
   return blocks;
 }
 
-export function Markdown({ content }: { content: string }) {
+export function Markdown({
+  content,
+  onAsk,
+}: {
+  content: string;
+  onAsk?: (text: string) => void;
+}) {
   const blocks = useMemo(() => parseBlocks(content), [content]);
+  function handleClick(e: React.MouseEvent<HTMLDivElement>) {
+    const el = (e.target as HTMLElement).closest("[data-ask]") as HTMLElement | null;
+    if (!el || !onAsk) return;
+    e.preventDefault();
+    const ask = el.getAttribute("data-ask");
+    if (ask) onAsk(ask);
+  }
   return (
-    <div className="text-sm">
+    <div className="text-sm" onClick={handleClick}>
       {blocks.map((b, i) => {
         if (b.kind === "code") return <CodeBlock key={i} lang={b.lang} code={b.code} />;
+        if (b.kind === "gallery") return <Gallery key={i} images={b.images} />;
         if (b.kind === "refs") return <References key={i} items={b.items} />;
         return <div key={i} dangerouslySetInnerHTML={{ __html: b.html }} />;
       })}
