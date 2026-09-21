@@ -87,38 +87,82 @@ export async function fetchDocument(rawUrl: string) {
 
 export async function searchWeb(query: string, opts?: { pdfOnly?: boolean }) {
   const q = opts?.pdfOnly ? `${query} filetype:pdf` : query;
+  const strip = (x: string) =>
+    x
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/&quot;/g, '"')
+      .replace(/&#x27;|&#39;/g, "'")
+      .replace(/&nbsp;/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+  const results: { title: string; url: string; snippet: string }[] = [];
+
+  // 1) DuckDuckGo Lite (POST) — the most reliable text endpoint.
   try {
-    const res = await fetch(
-      `https://html.duckduckgo.com/html/?q=${encodeURIComponent(q)}`,
-      { headers: { "User-Agent": SEARCH_UA, Accept: "*/*" } },
-    );
-    if (!res.ok) return { ok: false as const, error: `Search failed (${res.status}).` };
-
-    const html = await res.text();
-    const strip = (s: string) => s.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-    const results: { title: string; url: string; snippet: string }[] = [];
-    const blocks = html.split(/class="result__a"/i).slice(1);
-    for (const block of blocks) {
-      if (results.length >= 8) break;
-      const hrefM = /href="([^"]+)"/i.exec(block);
-      if (!hrefM) continue;
-      let href = hrefM[1].replace(/&amp;/g, "&");
-      const uddg = /uddg=([^&]+)/.exec(href);
-      if (uddg) href = decodeURIComponent(uddg[1]);
-      if (href.startsWith("//")) href = `https:${href}`;
-      if (!/^https?:\/\//.test(href)) continue;
-      const title = strip(/>([\s\S]*?)<\/a>/i.exec(block)?.[1] ?? "");
-      const snip = strip(
-        /class="result__snippet"[^>]*>([\s\S]*?)<\/a>/i.exec(block)?.[1] ?? "",
-      );
-      results.push({ title, url: href, snippet: snip.slice(0, 300) });
+    const res = await fetch("https://lite.duckduckgo.com/lite/", {
+      method: "POST",
+      headers: {
+        "User-Agent": SEARCH_UA,
+        "Content-Type": "application/x-www-form-urlencoded",
+        Accept: "text/html",
+      },
+      body: new URLSearchParams({ q }).toString(),
+    });
+    if (res.ok) {
+      const html = await res.text();
+      const rows = html.split(/class=['"]result-link['"]/i);
+      for (let i = 1; i < rows.length && results.length < 10; i++) {
+        const before = rows[i - 1];
+        const href = /href="([^"]+)"[^>]*$/.exec(before.trimEnd())?.[1];
+        const title = strip(/^>([\s\S]*?)<\/a>/.exec(rows[i])?.[1] ?? "");
+        const snippet = strip(
+          /class=['"]result-snippet['"][^>]*>([\s\S]*?)<\/td>/i.exec(rows[i])?.[1] ?? "",
+        ).slice(0, 320);
+        if (!href || !/^https?:\/\//.test(href)) continue;
+        if (results.some((r) => r.url === href)) continue;
+        results.push({ title: title || href, url: href, snippet });
+      }
     }
-
-    if (!results.length) return { ok: false as const, error: "No results found." };
-    return { ok: true as const, query: q, results };
-  } catch (e) {
-    return { ok: false as const, error: `Search error: ${(e as Error).message}` };
+  } catch {
+    /* fall through */
   }
+
+  // 2) Fallback: classic DuckDuckGo HTML endpoint.
+  if (!results.length) {
+    try {
+      const res = await fetch(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(q)}`, {
+        headers: { "User-Agent": SEARCH_UA, Accept: "*/*" },
+      });
+      if (res.ok) {
+        const html = await res.text();
+        const blocks = html.split(/class="result__a"/i).slice(1);
+        for (const block of blocks) {
+          if (results.length >= 8) break;
+          const hrefM = /href="([^"]+)"/i.exec(block);
+          if (!hrefM) continue;
+          let href = hrefM[1].replace(/&amp;/g, "&");
+          const uddg = /uddg=([^&]+)/.exec(href);
+          if (uddg) href = decodeURIComponent(uddg[1]);
+          if (href.startsWith("//")) href = `https:${href}`;
+          if (!/^https?:\/\//.test(href)) continue;
+          results.push({
+            title: strip(/>([\s\S]*?)<\/a>/i.exec(block)?.[1] ?? ""),
+            url: href,
+            snippet: strip(
+              /class="result__snippet"[^>]*>([\s\S]*?)<\/a>/i.exec(block)?.[1] ?? "",
+            ).slice(0, 300),
+          });
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  if (!results.length) return { ok: false as const, error: "No results found." };
+  return { ok: true as const, query: q, results };
 }
 
 /* ------------------------------------------------------------------ *
