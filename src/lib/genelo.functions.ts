@@ -504,7 +504,7 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
       }
 
       convo.push(msg);
-      const { searchWeb, fetchDocument } = await import("./web-tools.server");
+      const { searchWeb, fetchDocument, searchImages, findPerson } = await import("./web-tools.server");
       const { adminStats, adminListUsers } = await import("./admin-ai.server");
       const results = await Promise.all(
         calls.slice(0, 6).map(async (c) => {
@@ -520,6 +520,7 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
             origin?: string;
             destination?: string;
             mode?: string;
+            hint?: string;
           } = {};
           try {
             args = JSON.parse(c.function.arguments || "{}");
@@ -580,6 +581,10 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
               const { mapsDirections } = await import("./maps.server");
               return { id: c.id, out: await mapsDirections(args.origin, args.destination, args.mode ?? "DRIVE") };
             }
+            if (c.function.name === "search_images" && args.query)
+              return { id: c.id, out: await searchImages(args.query, args.limit ?? 8) };
+            if (c.function.name === "find_person" && args.name)
+              return { id: c.id, out: await findPerson(args.name, args.hint) };
             if (isAdmin && c.function.name === "admin_stats")
               return { id: c.id, out: await adminStats() };
             if (isAdmin && c.function.name === "admin_list_users")
