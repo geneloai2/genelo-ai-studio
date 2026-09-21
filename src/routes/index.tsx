@@ -996,7 +996,7 @@ function Bubble({
         <Sparkles className="h-3.5 w-3.5" />
       </div>
       <div className="min-w-0 flex-1 text-foreground">
-        <Markdown content={msg.content} />
+        <Markdown content={msg.content} onAsk={onSuggestion} />
         {msg.image && (
           <img
             src={msg.image}

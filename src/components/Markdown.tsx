@@ -1,5 +1,6 @@
 // Rich markdown renderer with VS Code–style syntax highlighting,
 // per-code-block copy button, and favicon icons on reference links.
+import type React from "react";
 import { useMemo, useState } from "react";
 import hljs from "highlight.js";
 import "highlight.js/styles/github-dark.css";
