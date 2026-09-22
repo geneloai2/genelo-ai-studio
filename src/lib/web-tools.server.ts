@@ -85,84 +85,204 @@ export async function fetchDocument(rawUrl: string) {
   }
 }
 
+type Hit = { title: string; url: string; snippet: string; source?: string };
+
+const strip = (x: string) =>
+  x
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;|&#39;/g, "'")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+/* ---------------- Providers (keyed APIs first, then keyless) -------------- */
+
+async function braveSearch(q: string): Promise<Hit[]> {
+  const key = process.env.BRAVE_API_KEY;
+  if (!key) return [];
+  const res = await fetch(
+    `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(q)}&count=10`,
+    { headers: { Accept: "application/json", "X-Subscription-Token": key } },
+  );
+  if (!res.ok) return [];
+  const j = (await res.json()) as any;
+  return (j.web?.results ?? []).map((r: any) => ({
+    title: strip(r.title ?? ""),
+    url: r.url as string,
+    snippet: strip(r.description ?? "").slice(0, 320),
+    source: "Brave",
+  }));
+}
+
+async function tavilySearch(q: string): Promise<Hit[]> {
+  const key = process.env.TAVILY_API_KEY;
+  if (!key) return [];
+  const res = await fetch("https://api.tavily.com/search", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+    body: JSON.stringify({ query: q, max_results: 10, search_depth: "advanced" }),
+  });
+  if (!res.ok) return [];
+  const j = (await res.json()) as any;
+  return (j.results ?? []).map((r: any) => ({
+    title: strip(r.title ?? ""),
+    url: r.url as string,
+    snippet: strip(r.content ?? "").slice(0, 320),
+    source: "Tavily",
+  }));
+}
+
+async function serperSearch(q: string): Promise<Hit[]> {
+  const key = process.env.SERPER_API_KEY;
+  if (!key) return [];
+  const res = await fetch("https://google.serper.dev/search", {
+    method: "POST",
+    headers: { "X-API-KEY": key, "Content-Type": "application/json" },
+    body: JSON.stringify({ q, num: 10 }),
+  });
+  if (!res.ok) return [];
+  const j = (await res.json()) as any;
+  return (j.organic ?? []).map((r: any) => ({
+    title: strip(r.title ?? ""),
+    url: r.link as string,
+    snippet: strip(r.snippet ?? "").slice(0, 320),
+    source: "Google (Serper)",
+  }));
+}
+
+async function googleCseSearch(q: string): Promise<Hit[]> {
+  const key = process.env.GOOGLE_SEARCH_API_KEY;
+  const cx = process.env.GOOGLE_SEARCH_CX;
+  if (!key || !cx) return [];
+  const res = await fetch(
+    `https://www.googleapis.com/customsearch/v1?key=${key}&cx=${cx}&num=10&q=${encodeURIComponent(q)}`,
+  );
+  if (!res.ok) return [];
+  const j = (await res.json()) as any;
+  return (j.items ?? []).map((r: any) => ({
+    title: strip(r.title ?? ""),
+    url: r.link as string,
+    snippet: strip(r.snippet ?? "").slice(0, 320),
+    source: "Google",
+  }));
+}
+
+/** Keyless: DuckDuckGo Lite (POST). Works when the host is not challenged. */
+async function ddgLite(q: string): Promise<Hit[]> {
+  const res = await fetch("https://lite.duckduckgo.com/lite/", {
+    method: "POST",
+    headers: {
+      "User-Agent": SEARCH_UA,
+      "Content-Type": "application/x-www-form-urlencoded",
+      Accept: "text/html",
+    },
+    body: new URLSearchParams({ q }).toString(),
+  });
+  if (!res.ok) return [];
+  const html = await res.text();
+  const out: Hit[] = [];
+  const rows = html.split(/class=['"]result-link['"]/i);
+  for (let i = 1; i < rows.length && out.length < 10; i++) {
+    const href = /href="([^"]+)"[^>]*$/.exec(rows[i - 1].trimEnd())?.[1];
+    const title = strip(/^>([\s\S]*?)<\/a>/.exec(rows[i])?.[1] ?? "");
+    const snippet = strip(
+      /class=['"]result-snippet['"][^>]*>([\s\S]*?)<\/td>/i.exec(rows[i])?.[1] ?? "",
+    ).slice(0, 320);
+    if (!href || !/^https?:\/\//.test(href)) continue;
+    if (out.some((r) => r.url === href)) continue;
+    out.push({ title: title || href, url: href, snippet, source: "DuckDuckGo" });
+  }
+  return out;
+}
+
+/** Keyless: DuckDuckGo Instant Answer API — abstracts and related topics. */
+async function ddgInstant(q: string): Promise<Hit[]> {
+  const res = await fetch(
+    `https://api.duckduckgo.com/?q=${encodeURIComponent(q)}&format=json&no_html=1&skip_disambig=1`,
+    { headers: { "User-Agent": SEARCH_UA, Accept: "application/json" } },
+  );
+  if (!res.ok) return [];
+  const j = (await res.json()) as any;
+  const out: Hit[] = [];
+  if (j.AbstractURL && j.AbstractText)
+    out.push({
+      title: j.Heading || q,
+      url: j.AbstractURL,
+      snippet: String(j.AbstractText).slice(0, 320),
+      source: j.AbstractSource || "DuckDuckGo",
+    });
+  for (const t of j.RelatedTopics ?? []) {
+    const item = t.FirstURL ? t : t.Topics?.[0];
+    if (!item?.FirstURL) continue;
+    out.push({
+      title: strip(item.Text ?? item.FirstURL).slice(0, 120),
+      url: item.FirstURL,
+      snippet: strip(item.Text ?? "").slice(0, 320),
+      source: "DuckDuckGo",
+    });
+    if (out.length >= 8) break;
+  }
+  return out;
+}
+
+/** Keyless: Wikipedia full-text search — always reachable, great for facts. */
+async function wikipediaSearch(q: string): Promise<Hit[]> {
+  const res = await fetch(
+    `https://en.wikipedia.org/w/api.php?action=query&list=search&srlimit=6&format=json&origin=*&srsearch=${encodeURIComponent(q)}`,
+    { headers: { "User-Agent": UA, Accept: "application/json" } },
+  );
+  if (!res.ok) return [];
+  const j = (await res.json()) as any;
+  return (j.query?.search ?? []).map((r: any) => ({
+    title: r.title as string,
+    url: `https://en.wikipedia.org/wiki/${encodeURIComponent(String(r.title).replace(/ /g, "_"))}`,
+    snippet: strip(r.snippet ?? "").slice(0, 320),
+    source: "Wikipedia",
+  }));
+}
+
 export async function searchWeb(query: string, opts?: { pdfOnly?: boolean }) {
   const q = opts?.pdfOnly ? `${query} filetype:pdf` : query;
-  const strip = (x: string) =>
-    x
-      .replace(/<[^>]+>/g, " ")
-      .replace(/&amp;/g, "&")
-      .replace(/&quot;/g, '"')
-      .replace(/&#x27;|&#39;/g, "'")
-      .replace(/&nbsp;/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
 
-  const results: { title: string; url: string; snippet: string }[] = [];
+  const providers: Array<() => Promise<Hit[]>> = [
+    () => braveSearch(q),
+    () => tavilySearch(q),
+    () => serperSearch(q),
+    () => googleCseSearch(q),
+    () => ddgLite(q),
+    () => ddgInstant(q),
+    () => wikipediaSearch(q),
+  ];
 
-  // 1) DuckDuckGo Lite (POST) — the most reliable text endpoint.
-  try {
-    const res = await fetch("https://lite.duckduckgo.com/lite/", {
-      method: "POST",
-      headers: {
-        "User-Agent": SEARCH_UA,
-        "Content-Type": "application/x-www-form-urlencoded",
-        Accept: "text/html",
-      },
-      body: new URLSearchParams({ q }).toString(),
-    });
-    if (res.ok) {
-      const html = await res.text();
-      const rows = html.split(/class=['"]result-link['"]/i);
-      for (let i = 1; i < rows.length && results.length < 10; i++) {
-        const before = rows[i - 1];
-        const href = /href="([^"]+)"[^>]*$/.exec(before.trimEnd())?.[1];
-        const title = strip(/^>([\s\S]*?)<\/a>/.exec(rows[i])?.[1] ?? "");
-        const snippet = strip(
-          /class=['"]result-snippet['"][^>]*>([\s\S]*?)<\/td>/i.exec(rows[i])?.[1] ?? "",
-        ).slice(0, 320);
-        if (!href || !/^https?:\/\//.test(href)) continue;
-        if (results.some((r) => r.url === href)) continue;
-        results.push({ title: title || href, url: href, snippet });
-      }
-    }
-  } catch {
-    /* fall through */
-  }
+  const results: Hit[] = [];
+  const seen = new Set<string>();
+  const tried: string[] = [];
 
-  // 2) Fallback: classic DuckDuckGo HTML endpoint.
-  if (!results.length) {
+  for (const run of providers) {
+    let hits: Hit[] = [];
     try {
-      const res = await fetch(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(q)}`, {
-        headers: { "User-Agent": SEARCH_UA, Accept: "*/*" },
-      });
-      if (res.ok) {
-        const html = await res.text();
-        const blocks = html.split(/class="result__a"/i).slice(1);
-        for (const block of blocks) {
-          if (results.length >= 8) break;
-          const hrefM = /href="([^"]+)"/i.exec(block);
-          if (!hrefM) continue;
-          let href = hrefM[1].replace(/&amp;/g, "&");
-          const uddg = /uddg=([^&]+)/.exec(href);
-          if (uddg) href = decodeURIComponent(uddg[1]);
-          if (href.startsWith("//")) href = `https:${href}`;
-          if (!/^https?:\/\//.test(href)) continue;
-          results.push({
-            title: strip(/>([\s\S]*?)<\/a>/i.exec(block)?.[1] ?? ""),
-            url: href,
-            snippet: strip(
-              /class="result__snippet"[^>]*>([\s\S]*?)<\/a>/i.exec(block)?.[1] ?? "",
-            ).slice(0, 300),
-          });
-        }
-      }
+      hits = await run();
     } catch {
-      /* ignore */
+      hits = [];
     }
+    for (const h of hits) {
+      if (!h.url || seen.has(h.url)) continue;
+      seen.add(h.url);
+      results.push(h);
+    }
+    if (hits[0]?.source) tried.push(hits[0].source);
+    if (results.length >= 8) break;
   }
 
-  if (!results.length) return { ok: false as const, error: "No results found." };
-  return { ok: true as const, query: q, results };
+  if (!results.length)
+    return {
+      ok: false as const,
+      error:
+        "Web search is unavailable right now (no search provider responded). Answer from your own knowledge and say the live web could not be reached.",
+    };
+  return { ok: true as const, query: q, engines: tried, results: results.slice(0, 12) };
 }
 
 /* ------------------------------------------------------------------ *
