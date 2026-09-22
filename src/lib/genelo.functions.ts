@@ -202,11 +202,11 @@ const ChatInput = z.object({
       z.object({
         role: z.enum(["user", "assistant"]),
         content: z.union([
-          z.string().min(1).max(40000),
+          z.string().min(1).max(300000),
           z
             .array(
               z.union([
-                z.object({ type: z.literal("text"), text: z.string().min(1).max(40000) }),
+                z.object({ type: z.literal("text"), text: z.string().min(1).max(300000) }),
                 z.object({
                   type: z.literal("image_url"),
                   image_url: z.object({ url: z.string().min(1).max(3_000_000) }),
