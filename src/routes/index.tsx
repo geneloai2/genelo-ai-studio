@@ -285,6 +285,42 @@ function HomePage() {
     });
   }
 
+  /** Unpack an uploaded .zip in the browser so the AI can read and edit every file. */
+  async function unpackZipToText(f: File) {
+    const { unzipSync, strFromU8 } = await import("fflate");
+    const buf = new Uint8Array(await f.arrayBuffer());
+    const entries = unzipSync(buf);
+    const textLike =
+      /\.(txt|md|csv|json|js|mjs|cjs|ts|tsx|jsx|html|htm|css|scss|py|java|php|sql|xml|yml|yaml|sh|env|ini|conf|toml|c|cpp|h|hpp|cs|rb|go|rs|swift|kt|vue|svelte|tzp|gitignore|htaccess)$/i;
+    const names = Object.keys(entries).filter((n) => !n.endsWith("/"));
+    const parts: string[] = [`📦 Attached project (zip): ${f.name} — ${names.length} files`];
+    const skipped: string[] = [];
+    let total = 0;
+    for (const name of names.slice(0, 120)) {
+      const data = entries[name];
+      if (!textLike.test(name) || data.length > 200_000) {
+        skipped.push(`${name} (${Math.round(data.length / 1024)}KB)`);
+        continue;
+      }
+      let content = "";
+      try {
+        content = strFromU8(data);
+      } catch {
+        skipped.push(name);
+        continue;
+      }
+      if (total + content.length > 220_000) {
+        skipped.push(name);
+        continue;
+      }
+      total += content.length;
+      parts.push(`----- FILE: ${name} -----\n${content}`);
+    }
+    if (skipped.length) parts.push(`----- SKIPPED (binary or too large) -----\n${skipped.join("\n")}`);
+    return parts.join("\n\n");
+  }
+
+
   async function onPickFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
     const next: Attachment[] = [];
@@ -295,11 +331,14 @@ function HomePage() {
       }
       try {
         const isImage = f.type.startsWith("image/");
-        let dataUrl = await readFileAsDataURL(f);
+        const isZip = /\.zip$/i.test(f.name) || f.type === "application/zip";
+        let dataUrl = isZip ? "" : await readFileAsDataURL(f);
         let text: string | undefined;
         if (isImage) {
           dataUrl = await compressImage(dataUrl);
           if (dataUrl.length > 1_800_000) dataUrl = await compressImage(dataUrl, 800, 0.65);
+        } else if (isZip) {
+          text = await unpackZipToText(f);
         } else if (
           f.type.startsWith("text/") ||
           /\.(md|txt|csv|json|js|ts|tsx|jsx|html|css|py|java|php|sql|xml|yml|yaml)$/i.test(f.name)
