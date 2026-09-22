@@ -489,7 +489,7 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
           Authorization: `Bearer ${key}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ model: mode.model, messages: convo, tools }),
+        body: JSON.stringify({ model: mode.model, messages: convo, tools, max_tokens: 32000 }),
       });
 
       if (resp.status === 429)
