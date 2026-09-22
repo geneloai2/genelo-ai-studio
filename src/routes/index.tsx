@@ -295,11 +295,14 @@ function HomePage() {
       }
       try {
         const isImage = f.type.startsWith("image/");
-        let dataUrl = await readFileAsDataURL(f);
+        const isZip = /\.zip$/i.test(f.name) || f.type === "application/zip";
+        let dataUrl = isZip ? "" : await readFileAsDataURL(f);
         let text: string | undefined;
         if (isImage) {
           dataUrl = await compressImage(dataUrl);
           if (dataUrl.length > 1_800_000) dataUrl = await compressImage(dataUrl, 800, 0.65);
+        } else if (isZip) {
+          text = await unpackZipToText(f);
         } else if (
           f.type.startsWith("text/") ||
           /\.(md|txt|csv|json|js|ts|tsx|jsx|html|css|py|java|php|sql|xml|yml|yaml)$/i.test(f.name)
