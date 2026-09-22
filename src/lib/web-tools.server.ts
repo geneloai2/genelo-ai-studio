@@ -288,45 +288,88 @@ export async function searchWeb(query: string, opts?: { pdfOnly?: boolean }) {
 /* ------------------------------------------------------------------ *
  * Image search (public web) — used to show real matching pictures.
  * ------------------------------------------------------------------ */
-export async function searchImages(query: string, limit = 8) {
-  try {
-    const tokenRes = await fetch(
-      `https://duckduckgo.com/?q=${encodeURIComponent(query)}&iax=images&ia=images`,
-      { headers: { "User-Agent": SEARCH_UA, Accept: "text/html" } },
-    );
-    const html = await tokenRes.text();
-    const vqd =
-      /vqd=["']?([-\w]+)["']?/.exec(html)?.[1] ?? /vqd=([\d-]+)&/.exec(html)?.[1];
-    if (!vqd) return { ok: false as const, error: "Image search is unavailable right now." };
+type Pic = {
+  title: string;
+  image: string;
+  thumbnail: string;
+  source: string;
+  width?: number;
+  height?: number;
+};
 
-    const res = await fetch(
-      `https://duckduckgo.com/i.js?l=us-en&o=json&q=${encodeURIComponent(query)}&vqd=${vqd}&f=,,,&p=1`,
-      {
-        headers: {
-          "User-Agent": SEARCH_UA,
-          Accept: "application/json",
-          Referer: "https://duckduckgo.com/",
-        },
+/** Keyless, always-available picture source (Openverse / Wikimedia). */
+async function openverseImages(query: string, limit: number): Promise<Pic[]> {
+  const res = await fetch(
+    `https://api.openverse.org/v1/images/?q=${encodeURIComponent(query)}&page_size=${limit}&mature=false`,
+    { headers: { "User-Agent": UA, Accept: "application/json" } },
+  );
+  if (!res.ok) return [];
+  const j = (await res.json()) as any;
+  return (j.results ?? [])
+    .filter((r: any) => typeof r.url === "string")
+    .map((r: any) => ({
+      title: String(r.title ?? query).slice(0, 160),
+      image: r.url as string,
+      thumbnail: (r.thumbnail as string) ?? (r.url as string),
+      source: (r.foreign_landing_url as string) ?? "",
+      width: r.width,
+      height: r.height,
+    }));
+}
+
+async function ddgImages(query: string, limit: number): Promise<Pic[]> {
+  const tokenRes = await fetch(
+    `https://duckduckgo.com/?q=${encodeURIComponent(query)}&iax=images&ia=images`,
+    { headers: { "User-Agent": SEARCH_UA, Accept: "text/html" } },
+  );
+  const html = await tokenRes.text();
+  const vqd = /vqd=["']?([-\w]+)["']?/.exec(html)?.[1] ?? /vqd=([\d-]+)&/.exec(html)?.[1];
+  if (!vqd) return [];
+  const res = await fetch(
+    `https://duckduckgo.com/i.js?l=us-en&o=json&q=${encodeURIComponent(query)}&vqd=${vqd}&f=,,,&p=1`,
+    {
+      headers: {
+        "User-Agent": SEARCH_UA,
+        Accept: "application/json",
+        Referer: "https://duckduckgo.com/",
       },
-    );
-    if (!res.ok) return { ok: false as const, error: `Image search failed (${res.status}).` };
-    const json = (await res.json()) as { results?: any[] };
-    const images = (json.results ?? [])
-      .filter((r) => typeof r.image === "string" && /^https?:\/\//.test(r.image))
-      .slice(0, Math.min(Math.max(limit, 1), 12))
-      .map((r) => ({
-        title: String(r.title ?? "").slice(0, 160),
-        image: r.image as string,
-        thumbnail: (r.thumbnail as string) ?? (r.image as string),
-        source: (r.url as string) ?? "",
-        width: r.width,
-        height: r.height,
-      }));
-    if (!images.length) return { ok: false as const, error: "No matching pictures found." };
-    return { ok: true as const, query, images };
-  } catch (e) {
-    return { ok: false as const, error: `Image search error: ${(e as Error).message}` };
+    },
+  );
+  if (!res.ok) return [];
+  const json = (await res.json()) as { results?: any[] };
+  return (json.results ?? [])
+    .filter((r) => typeof r.image === "string" && /^https?:\/\//.test(r.image))
+    .slice(0, limit)
+    .map((r) => ({
+      title: String(r.title ?? "").slice(0, 160),
+      image: r.image as string,
+      thumbnail: (r.thumbnail as string) ?? (r.image as string),
+      source: (r.url as string) ?? "",
+      width: r.width,
+      height: r.height,
+    }));
+}
+
+export async function searchImages(query: string, limit = 8) {
+  const n = Math.min(Math.max(limit, 1), 12);
+  const images: Pic[] = [];
+  const seen = new Set<string>();
+  for (const run of [() => ddgImages(query, n), () => openverseImages(query, n)]) {
+    let got: Pic[] = [];
+    try {
+      got = await run();
+    } catch {
+      got = [];
+    }
+    for (const p of got) {
+      if (seen.has(p.image)) continue;
+      seen.add(p.image);
+      images.push(p);
+    }
+    if (images.length >= n) break;
   }
+  if (!images.length) return { ok: false as const, error: "No matching pictures found." };
+  return { ok: true as const, query, images: images.slice(0, n) };
 }
 
 /* ------------------------------------------------------------------ *
