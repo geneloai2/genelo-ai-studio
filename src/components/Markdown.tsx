@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import hljs from "highlight.js";
 import "highlight.js/styles/github-dark.css";
 import { Check, Copy } from "lucide-react";
+import { ImageViewer } from "./ImageViewer";
 
 function escape(s: string) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -310,12 +311,21 @@ function parseBlocks(content: string): Block[] {
 export function Markdown({
   content,
   onAsk,
+  onAttachImage,
 }: {
   content: string;
   onAsk?: (text: string) => void;
+  onAttachImage?: (src: string, alt: string) => void;
 }) {
   const blocks = useMemo(() => parseBlocks(content), [content]);
+  const [viewing, setViewing] = useState<{ src: string; alt: string } | null>(null);
   function handleClick(e: React.MouseEvent<HTMLDivElement>) {
+    const img = e.target as HTMLElement;
+    if (img.tagName === "IMG" && !img.closest("button") && !img.closest("a")) {
+      const el = img as HTMLImageElement;
+      if (el.width > 24) setViewing({ src: el.src, alt: el.alt });
+      return;
+    }
     const el = (e.target as HTMLElement).closest("[data-ask]") as HTMLElement | null;
     if (!el || !onAsk) return;
     e.preventDefault();
@@ -326,10 +336,21 @@ export function Markdown({
     <div className="text-sm" onClick={handleClick}>
       {blocks.map((b, i) => {
         if (b.kind === "code") return <CodeBlock key={i} lang={b.lang} code={b.code} />;
-        if (b.kind === "gallery") return <Gallery key={i} images={b.images} />;
+        if (b.kind === "gallery")
+          return (
+            <Gallery key={i} images={b.images} onOpen={(src, alt) => setViewing({ src, alt })} />
+          );
         if (b.kind === "refs") return <References key={i} items={b.items} />;
         return <div key={i} dangerouslySetInnerHTML={{ __html: b.html }} />;
       })}
+      {viewing && (
+        <ImageViewer
+          src={viewing.src}
+          alt={viewing.alt}
+          onClose={() => setViewing(null)}
+          onAttach={onAttachImage}
+        />
+      )}
     </div>
   );
 }
