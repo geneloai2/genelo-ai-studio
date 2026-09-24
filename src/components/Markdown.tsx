@@ -112,17 +112,25 @@ function CodeBlock({ lang, code }: { lang: string; code: string }) {
   );
 }
 
-function Gallery({ images }: { images: { alt: string; src: string }[] }) {
+function Gallery({
+  images,
+  onOpen,
+}: {
+  images: { alt: string; src: string }[];
+  onOpen: (src: string, alt: string) => void;
+}) {
   if (images.length === 1) {
     const it = images[0];
     return (
       <figure className="my-3">
-        <img
-          src={it.src}
-          alt={it.alt}
-          loading="lazy"
-          className="max-h-80 w-auto rounded-xl border border-genelo/30 object-cover shadow-md"
-        />
+        <button type="button" onClick={() => onOpen(it.src, it.alt)} className="block">
+          <img
+            src={it.src}
+            alt={it.alt}
+            loading="lazy"
+            className="max-h-80 w-auto cursor-zoom-in rounded-xl border border-genelo/30 object-cover shadow-md"
+          />
+        </button>
         {it.alt && (
           <figcaption className="mt-1.5 text-xs italic text-muted-foreground">{it.alt}</figcaption>
         )}
@@ -133,12 +141,14 @@ function Gallery({ images }: { images: { alt: string; src: string }[] }) {
     <div className="-mx-1 my-3 flex snap-x gap-3 overflow-x-auto px-1 pb-2">
       {images.map((it, i) => (
         <figure key={i} className="w-64 flex-shrink-0 snap-start">
-          <img
-            src={it.src}
-            alt={it.alt}
-            loading="lazy"
-            className="h-40 w-64 rounded-xl border border-border object-cover shadow-md"
-          />
+          <button type="button" onClick={() => onOpen(it.src, it.alt)} className="block">
+            <img
+              src={it.src}
+              alt={it.alt}
+              loading="lazy"
+              className="h-40 w-64 cursor-zoom-in rounded-xl border border-border object-cover shadow-md"
+            />
+          </button>
           {it.alt && (
             <figcaption className="mt-1.5 line-clamp-2 text-[11px] text-muted-foreground">
               {it.alt}
