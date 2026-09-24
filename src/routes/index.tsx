@@ -30,8 +30,15 @@ import {
   FileText,
   Radio,
   Download,
+  ThumbsUp,
+  ThumbsDown,
+  Share2,
+  MoreHorizontal,
+  RefreshCw,
+  Flag,
 } from "lucide-react";
 import { toast, Toaster } from "sonner";
+import { ImageViewer, imageAsDataUrl } from "@/components/ImageViewer";
 
 const APK_DOWNLOAD_URL =
   "https://drive.google.com/uc?export=download&id=1PHL7ek6zEwz0rY21PfztwdI1IRGpBTfW";
@@ -69,6 +76,8 @@ type Msg = {
   image?: string;
   attachments?: Attachment[];
   downloads?: ZipDownload[];
+  sources?: { title: string; url: string }[];
+  fresh?: boolean;
 };
 type Profile = { plan: string; display_name?: string | null; avatar_url?: string | null; email?: string | null };
 
@@ -363,6 +372,43 @@ function HomePage() {
   }
 
 
+  async function attachImageFromUrl(src: string, alt: string) {
+    try {
+      const dataUrl = await imageAsDataUrl(src);
+      setAttachments((a) =>
+        [...a, { name: `${alt.slice(0, 40) || "picture"}.jpg`, mime: "image/jpeg", dataUrl, kind: "image" as const }].slice(0, 4),
+      );
+      toast.success("Picture added to your message");
+      textareaRef.current?.focus();
+    } catch {
+      toast.error("Could not add that picture.");
+    }
+  }
+
+  function regenerate() {
+    const lastUser = [...messages].reverse().find((m) => m.role === "user");
+    if (!lastUser) return;
+    const idx = messages.lastIndexOf(lastUser);
+    setMessages(messages.slice(0, idx));
+    setTimeout(() => send(lastUser.content), 0);
+  }
+
+  function buildStatusSteps(text: string, atts: Attachment[]) {
+    const t = text.toLowerCase();
+    const steps: string[] = [];
+    if (atts.some((a) => /\.zip$/i.test(a.name))) steps.push("📦 Reading your zip files…", "🧩 Analysing project structure…");
+    if (atts.some((a) => a.kind === "image")) steps.push("🖼️ Looking at your picture…");
+    if (atts.some((a) => /\.pdf$/i.test(a.name))) steps.push("📄 Reading the PDF…");
+    if (/(search|find|latest|news|who is|price|necta|almanac|today|research|tafuta|habari)/.test(t))
+      steps.push("🌐 Searching the web…", "🔎 Reading sources…");
+    if (/(picture|photo|image|picha)/.test(t)) steps.push("🖼️ Finding matching pictures…");
+    if (/(code|website|php|html|react|app|system|zip)/.test(t)) steps.push("💻 Writing code…");
+    if (/(calculate|solve|math|\d+\s*[-+*/x]\s*\d+)/.test(t)) steps.push("🧮 Calculating…");
+    steps.unshift("🤔 Thinking…");
+    steps.push("📊 Analysing…", "✍️ Writing the answer…");
+    return steps;
+  }
+
   async function send(overrideText?: string) {
     const text = (overrideText ?? input).trim();
     if ((!text && attachments.length === 0) || busy) return;
@@ -373,6 +419,8 @@ function HomePage() {
     setInput("");
     if (textareaRef.current) textareaRef.current.style.height = "auto";
     setAttachments([]);
+    setStatusSteps(buildStatusSteps(text, atts));
+    setStatusIdx(0);
     setBusy(true);
 
     let finalMessages = baseMessages;
@@ -421,7 +469,13 @@ function HomePage() {
         } else {
           finalMessages = [
             ...baseMessages,
-            { role: "assistant", content: r.content, downloads: r.downloads ?? [] },
+            {
+              role: "assistant",
+              content: r.content,
+              downloads: r.downloads ?? [],
+              sources: (r as any).sources ?? [],
+              fresh: true,
+            },
           ];
           speak(r.content);
         }
@@ -900,11 +954,20 @@ function HomePage() {
                       msg={m}
                       showSuggestions={!busy && m.role === "assistant" && i === messages.length - 1}
                       onSuggestion={(t) => send(t)}
+                      onAttachImage={attachImageFromUrl}
+                      onRegenerate={
+                        !busy && m.role === "assistant" && i === messages.length - 1
+                          ? regenerate
+                          : undefined
+                      }
                     />
                   ))}
                   {busy && (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Loader2 className="h-4 w-4 animate-spin" /> Genelo is thinking…
+                      <Loader2 className="h-4 w-4 animate-spin text-genelo" />
+                      <span key={statusIdx} className="animate-pulse">
+                        {statusSteps[Math.min(statusIdx, statusSteps.length - 1)]}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -977,17 +1040,61 @@ function extractSuggestions(content: string): string[] {
   return Array.from(new Set(cleaned)).slice(0, 3);
 }
 
+function hostOf(url: string) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
+
+/** Reveal a fresh answer line by line, like a live stream. */
+function useTypewriter(text: string, active: boolean) {
+  const [shown, setShown] = useState(active ? "" : text);
+  const [done, setDone] = useState(!active);
+  useEffect(() => {
+    if (!active) {
+      setShown(text);
+      setDone(true);
+      return;
+    }
+    const lines = text.split("\n");
+    const step = Math.max(1, Math.ceil(lines.length / 120));
+    let i = 0;
+    setDone(false);
+    const t = setInterval(() => {
+      i += step;
+      setShown(lines.slice(0, i).join("\n"));
+      if (i >= lines.length) {
+        clearInterval(t);
+        setDone(true);
+      }
+    }, 45);
+    return () => clearInterval(t);
+  }, [text, active]);
+  return { shown, done };
+}
+
 function Bubble({
   msg,
   onSuggestion,
   showSuggestions,
+  onAttachImage,
+  onRegenerate,
 }: {
   msg: Msg;
   onSuggestion?: (text: string) => void;
   showSuggestions?: boolean;
+  onAttachImage?: (src: string, alt: string) => void;
+  onRegenerate?: () => void;
 }) {
   const isUser = msg.role === "user";
   const [copied, setCopied] = useState(false);
+  const [vote, setVote] = useState<"up" | "down" | null>(null);
+  const [speaking, setSpeaking] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [viewing, setViewing] = useState<string | null>(null);
+  const { shown, done } = useTypewriter(msg.content, !isUser && !!msg.fresh);
   async function copy() {
     const ok = await copyText(msg.content);
     if (!ok) {
@@ -996,6 +1103,32 @@ function Bubble({
     }
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
+  }
+  function toggleSpeak() {
+    const s = typeof window !== "undefined" ? window.speechSynthesis : undefined;
+    if (!s) return toast.error("Speech is not supported on this device.");
+    if (speaking) {
+      s.cancel();
+      setSpeaking(false);
+      return;
+    }
+    const u = new SpeechSynthesisUtterance(msg.content.replace(/[#*`>_\[\]()!]/g, " ").slice(0, 4000));
+    u.onend = () => setSpeaking(false);
+    s.cancel();
+    s.speak(u);
+    setSpeaking(true);
+  }
+  async function share() {
+    const text = msg.content.slice(0, 3000);
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "Genelo AI", text, url: "https://geneloai.lovable.app" });
+        return;
+      }
+    } catch {
+      return;
+    }
+    if (await copyText(text)) toast.success("Answer copied — paste it anywhere to share.");
   }
   if (isUser) {
     return (
@@ -1027,23 +1160,57 @@ function Bubble({
       </div>
     );
   }
-  const suggestions = showSuggestions ? extractSuggestions(msg.content) : [];
-  // Assistant: full-width, no box, ChatGPT-style
+  const suggestions = showSuggestions && done ? extractSuggestions(msg.content) : [];
+  const iconBtn =
+    "rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground";
   return (
     <div className="group flex gap-3">
       <div className="mt-1 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-foreground text-background">
         <Sparkles className="h-3.5 w-3.5" />
       </div>
       <div className="min-w-0 flex-1 text-foreground">
-        <Markdown content={msg.content} onAsk={onSuggestion} />
+        {msg.sources && msg.sources.length > 0 && (
+          <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+            {msg.sources.map((s) => (
+              <a
+                key={s.url}
+                href={s.url}
+                target="_blank"
+                rel="noreferrer"
+                title={s.title}
+                className="flex max-w-[200px] flex-shrink-0 items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-medium hover:bg-muted"
+              >
+                <img
+                  src={`https://www.google.com/s2/favicons?domain=${hostOf(s.url)}&sz=32`}
+                  alt=""
+                  className="h-4 w-4 flex-shrink-0 rounded-full"
+                  loading="lazy"
+                />
+                <span className="truncate">{hostOf(s.url)}</span>
+              </a>
+            ))}
+          </div>
+        )}
+        <Markdown content={shown} onAsk={onSuggestion} onAttachImage={onAttachImage} />
+        {!done && <span className="ml-1 inline-block h-4 w-1.5 animate-pulse rounded-sm bg-genelo align-middle" />}
         {msg.image && (
-          <img
-            src={msg.image}
-            alt="Generated"
-            className="mt-3 max-h-96 rounded-lg border border-border"
+          <button type="button" onClick={() => setViewing(msg.image!)} className="mt-3 block">
+            <img
+              src={msg.image}
+              alt="Generated"
+              className="max-h-96 cursor-zoom-in rounded-lg border border-border"
+            />
+          </button>
+        )}
+        {viewing && (
+          <ImageViewer
+            src={viewing}
+            alt="genelo-image"
+            onClose={() => setViewing(null)}
+            onAttach={onAttachImage}
           />
         )}
-        {msg.downloads && msg.downloads.length > 0 && (
+        {done && msg.downloads && msg.downloads.length > 0 && (
           <div className="mt-3 space-y-2">
             {msg.downloads.map((d, i) => (
               <div key={i} className="rounded-xl border border-border bg-card p-3">
@@ -1076,20 +1243,73 @@ function Bubble({
                 onClick={() => onSuggestion(s.replace(/^"|"$/g, ""))}
                 className="rounded-full border border-border bg-background px-3 py-1.5 text-left text-xs font-medium text-foreground transition-colors hover:bg-accent"
               >
-                ✨ {s}
+                ↪ {s}
               </button>
             ))}
           </div>
         )}
-        <div className="mt-2 flex items-center gap-2 transition-opacity md:opacity-0 md:group-hover:opacity-100">
-          <button
-            onClick={copy}
-            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
-          >
-            {copied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
-            <span className={copied ? "text-green-500" : ""}>{copied ? "Copied" : "Copy response"}</span>
-          </button>
-        </div>
+        {done && (
+          <div className="relative mt-2 flex items-center gap-0.5">
+            <button onClick={copy} className={iconBtn} aria-label="Copy" title="Copy">
+              {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+            </button>
+            <button
+              onClick={() => {
+                setVote(vote === "up" ? null : "up");
+                if (vote !== "up") toast.success("Thanks for the feedback!");
+              }}
+              className={iconBtn}
+              aria-label="Good response"
+              title="Good response"
+            >
+              <ThumbsUp className={`h-4 w-4 ${vote === "up" ? "fill-genelo text-genelo" : ""}`} />
+            </button>
+            <button
+              onClick={() => {
+                setVote(vote === "down" ? null : "down");
+                if (vote !== "down") toast.message("Thanks — Genelo will do better.");
+              }}
+              className={iconBtn}
+              aria-label="Bad response"
+              title="Bad response"
+            >
+              <ThumbsDown className={`h-4 w-4 ${vote === "down" ? "fill-destructive text-destructive" : ""}`} />
+            </button>
+            <button onClick={toggleSpeak} className={iconBtn} aria-label="Read aloud" title="Read aloud">
+              {speaking ? <VolumeX className="h-4 w-4 text-genelo" /> : <Volume2 className="h-4 w-4" />}
+            </button>
+            <button onClick={share} className={iconBtn} aria-label="Share" title="Share">
+              <Share2 className="h-4 w-4" />
+            </button>
+            <button onClick={() => setMoreOpen((o) => !o)} className={iconBtn} aria-label="More" title="More">
+              <MoreHorizontal className="h-4 w-4" />
+            </button>
+            {moreOpen && (
+              <div className="absolute left-32 top-9 z-20 w-44 rounded-xl border border-border bg-popover p-1 text-sm shadow-lg">
+                {onRegenerate && (
+                  <button
+                    onClick={() => {
+                      setMoreOpen(false);
+                      onRegenerate();
+                    }}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-muted"
+                  >
+                    <RefreshCw className="h-4 w-4" /> Regenerate
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setMoreOpen(false);
+                    toast.success("Reported. Thank you for helping improve Genelo AI.");
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-muted"
+                >
+                  <Flag className="h-4 w-4" /> Report
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

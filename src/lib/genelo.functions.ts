@@ -481,6 +481,11 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
     ];
 
     const downloads: { fileName: string; dataUrl: string; files: string[] }[] = [];
+    const sources: { title: string; url: string }[] = [];
+    const addSource = (title: string | undefined, url: string | undefined) => {
+      if (!url || !/^https?:\/\//.test(url) || sources.some((s) => s.url === url) || sources.length >= 10) return;
+      sources.push({ title: (title || url).slice(0, 120), url });
+    };
 
     for (let step = 0; step < 8; step++) {
       const resp = await fetch(AI_URL, {
@@ -516,6 +521,7 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
           ok: true as const,
           content: (msg?.content as string) ?? "",
           downloads,
+          sources,
         };
       }
 
@@ -612,6 +618,11 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
         }),
       );
       for (const r of results) {
+        const o = r.out as any;
+        if (o?.ok) {
+          for (const h of (o.results ?? []).slice(0, 5)) addSource(h.title, h.url);
+          if (o.url && o.text) addSource(o.title, o.url);
+        }
         convo.push({
           role: "tool",
           tool_call_id: r.id,
