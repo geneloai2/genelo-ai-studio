@@ -113,6 +113,13 @@ function HomePage() {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [statusSteps, setStatusSteps] = useState<string[]>(["🤔 Thinking…"]);
+  const [statusIdx, setStatusIdx] = useState(0);
+  useEffect(() => {
+    if (!busy) return;
+    const t = setInterval(() => setStatusIdx((i) => i + 1), 1600);
+    return () => clearInterval(t);
+  }, [busy]);
   const [imgMode, setImgMode] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
