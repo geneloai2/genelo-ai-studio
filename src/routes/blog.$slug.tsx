@@ -195,7 +195,7 @@ export const Route = createFileRoute("/blog/$slug")({
   ),
   errorComponent: ({ error }) => (
     <main className="mx-auto max-w-3xl px-5 py-12 text-foreground">
-      <p>Something went wrong: {error.message}</p>
+      <p>Something went wrong: {(error as Error).message}</p>
     </main>
   ),
   component: PostPage,
