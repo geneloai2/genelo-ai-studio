@@ -10,7 +10,7 @@ import {
   grantAdminByEmail,
   checkAdmin,
 } from "@/lib/admin.functions";
-import logoAsset from "@/assets/genelo-ai-logo.png.asset.json";
+import { BRAND_LOGO } from "@/lib/brand";
 import {
   Users,
   Crown,
@@ -44,6 +44,10 @@ export const Route = createFileRoute("/admin")({
     meta: [
       { title: "Genelo AI Console — Admin dashboard" },
       { name: "description", content: "Genelo AI Console: users, plans, roles and platform performance." },
+      { property: "og:title", content: "Genelo AI Console — GNLTECH Admin" },
+      { property: "og:description", content: "GNLTECH’s Genelo AI administration console for users, plans and platform performance." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: AdminPage,
@@ -236,9 +240,9 @@ function AdminPage() {
           <Menu className="h-5 w-5" />
         </button>
         <Link to="/" className="flex items-center gap-2">
-          <img src={logoAsset.url} alt="Genelo AI" className="h-7 w-8 object-contain" />
+          <img src={BRAND_LOGO} alt="GNLTECH logo" className="h-7 w-8 object-contain" />
           <span className="hidden text-lg tracking-tight text-foreground sm:inline">
-            Genelo AI <span className="text-muted-foreground">Console</span>
+            Genelo AI <span className="text-muted-foreground">Console · GNLTECH</span>
           </span>
         </Link>
         <div className="relative mx-auto w-full max-w-2xl">
@@ -269,7 +273,7 @@ function AdminPage() {
         >
           <div className="p-3">
             <div className="flex items-center gap-2 rounded-lg border border-border px-3 py-3">
-              <img src={logoAsset.url} alt="" className="h-6 w-7 object-contain" />
+              <img src={BRAND_LOGO} alt="GNLTECH logo" className="h-6 w-7 object-contain" />
               <span className="truncate text-sm">https://geneloai.lovable.app/</span>
             </div>
           </div>

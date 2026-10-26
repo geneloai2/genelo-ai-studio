@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
+import { BRAND_LOGO_ABSOLUTE } from "@/lib/brand";
 
 const BASE_URL = "https://geneloai.lovable.app";
 
@@ -7,13 +8,13 @@ export const Route = createFileRoute("/sitemap.xml")({
   server: {
     handlers: {
       GET: async () => {
-        const LOGO = `${BASE_URL}/__l5e/assets-v1/f717c15c-b7b0-4c58-9d24-077f2748f5a3/genelo-ai-logo-v3.png`;
+        const LOGO = BRAND_LOGO_ABSOLUTE;
         const FOUNDER = `${BASE_URL}/__l5e/assets-v1/68d35b19-9dec-4b11-b4bd-3d2f1dbda74f/founder-genelo-2.jpg`;
         const images: Record<string, { url: string; title: string }[]> = {
-          "/": [{ url: LOGO, title: "Genelo AI official logo" }],
+          "/": [{ url: LOGO, title: "GNLTECH — official brand of Genelo AI" }],
           "/about": [
             { url: FOUNDER, title: "Genelo Moses Mwazembe — founder of Genelo AI" },
-            { url: LOGO, title: "Genelo AI official logo" },
+            { url: LOGO, title: "GNLTECH — official brand of Genelo AI" },
           ],
           "/blog/meet-the-founder": [
             { url: FOUNDER, title: "Genelo Moses Mwazembe — founder of Genelo AI" },

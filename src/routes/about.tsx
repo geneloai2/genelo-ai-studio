@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import founderAsset from "@/assets/founder-genelo.jpg.asset.json";
 import logoAsset from "@/assets/genelo-ai-logo.png.asset.json";
+import { BRAND_LOGO, BRAND_LOGO_ABSOLUTE, BRAND_WEBSITE } from "@/lib/brand";
 import { AdSenseUnit } from "@/components/AdSense";
 import { Download } from "lucide-react";
 
@@ -45,6 +46,7 @@ export const Route = createFileRoute("/about")({
           name: "GNLTECH",
           alternateName: ["GNLTECH.COMPANY.LTD", "GNL Technology"],
           url: "https://gnltech.wuaze.com/",
+          logo: BRAND_LOGO_ABSOLUTE,
           description: "GNLTECH is a Tanzanian technology-focused business associated with software services and digital platforms including Genelo AI, Genelo Shop and Genelo Pay. Its agricultural project, GNL Environment & Investment, aims to connect farmers and buyers, support crop trading and coordinate distribution using digital tools.",
           founder: { "@type": "Person", name: "Genelo Moses Mwazembe", url: `${SITE_ORIGIN}/about` },
           sameAs: ["https://gnltech.wuaze.com/about.php"],
@@ -148,8 +150,8 @@ function AboutPage() {
       <article className="prose prose-neutral dark:prose-invert max-w-none">
         <div className="mb-8 flex items-center gap-3">
           <img
-            src={LOGO_IMAGE}
-            alt="Genelo AI logo"
+            src={BRAND_LOGO}
+            alt="GNLTECH logo"
             width={56}
             height={56}
             className="rounded-xl border border-border bg-background object-contain p-1 shadow-sm"
@@ -157,7 +159,7 @@ function AboutPage() {
           />
           <div>
             <h1 className="m-0 text-4xl font-bold tracking-tight">About Genelo AI</h1>
-            <p className="m-0 mt-1 text-sm text-muted-foreground">Founded & built in Tanzania</p>
+            <p className="m-0 mt-1 text-sm text-muted-foreground">Genelo AI by GNLTECH · Tanzania</p>
           </div>
         </div>
         <p className="mt-4 text-lg text-muted-foreground">
@@ -167,6 +169,9 @@ function AboutPage() {
         </p>
 
         <h2 className="mt-10 text-2xl font-semibold">About GNLTECH</h2>
+        <a href={BRAND_WEBSITE} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+          gnltech.wuaze.com ↗
+        </a>
         <p>
           GNLTECH (GNLTECH.COMPANY.LTD), also known as GNL Technology, is our
           Tanzanian technology-focused business behind Genelo AI. Its work brings

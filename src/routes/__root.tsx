@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
+import { BRAND_LOGO_ABSOLUTE } from "@/lib/brand";
 
 function NotFoundComponent() {
   return (
@@ -68,7 +69,7 @@ function ErrorComponent({ error, reset }: { error: unknown; reset: () => void })
 }
 
 const SITE_ORIGIN = "https://geneloai.lovable.app";
-const LOGO_URL = `${SITE_ORIGIN}/__l5e/assets-v1/f717c15c-b7b0-4c58-9d24-077f2748f5a3/genelo-ai-logo-v3.png`;
+const LOGO_URL = BRAND_LOGO_ABSOLUTE;
 const FOUNDER_IMAGE = `${SITE_ORIGIN}/__l5e/assets-v1/68d35b19-9dec-4b11-b4bd-3d2f1dbda74f/founder-genelo-2.jpg`;
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
@@ -115,7 +116,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
             name: "GNLTECH",
             alternateName: "GNL Technology",
             url: "https://gnltech.wuaze.com/",
+            logo: LOGO_URL,
           },
+          brand: { "@type": "Brand", name: "GNLTECH", logo: LOGO_URL },
           logo: LOGO_URL,
           image: [LOGO_URL, FOUNDER_IMAGE],
           founder: {

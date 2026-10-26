@@ -7,7 +7,7 @@ import { Markdown } from "@/components/Markdown";
 import { chatWithGenelo, generateImage, getProfile } from "@/lib/genelo.functions";
 import { checkAdmin } from "@/lib/admin.functions";
 import { saveChat, getChat, listChats, deleteChat } from "@/lib/chats.functions";
-import logoAsset from "@/assets/genelo-ai-logo.png.asset.json";
+import { BRAND_LOGO } from "@/lib/brand";
 import {
   Sparkles,
   Send,
@@ -42,7 +42,7 @@ import { ImageViewer, imageAsDataUrl } from "@/components/ImageViewer";
 
 const APK_DOWNLOAD_URL =
   "https://drive.google.com/uc?export=download&id=1PHL7ek6zEwz0rY21PfztwdI1IRGpBTfW";
-const LOGO_URL = logoAsset.url;
+const LOGO_URL = BRAND_LOGO;
 
 function isNativeApp(): boolean {
   if (typeof window === "undefined") return false;
@@ -743,13 +743,16 @@ function HomePage() {
           <Link to="/" className="flex items-center gap-2">
             <img
               src={LOGO_URL}
-              alt="Genelo AI"
+              alt="GNLTECH logo"
               width={32}
               height={26}
               className="h-7 w-8 rounded-md bg-background object-contain"
               loading="eager"
             />
-            <span className="text-[15px] font-semibold tracking-tight">Genelo AI</span>
+            <span className="text-[15px] font-semibold tracking-tight">
+              Genelo AI
+              <span className="block text-[10px] font-medium text-muted-foreground">GNLTECH</span>
+            </span>
           </Link>
           <button
             onClick={() => setSidebarOpen(false)}
@@ -897,6 +900,7 @@ function HomePage() {
               <Menu className="h-5 w-5" />
             </button>
             <span className="text-sm font-medium text-muted-foreground">{currentMode.name}</span>
+            <img src={BRAND_LOGO} alt="GNLTECH logo" width={24} height={24} className="h-6 w-6 object-contain md:hidden" />
           </div>
           <div className="flex items-center gap-1.5">
             {!isNativeApp() && (
