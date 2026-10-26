@@ -15,26 +15,42 @@ const AD_SLOT = import.meta.env.VITE_ADSENSE_SLOT_ID as string | undefined;
 export const Route = createFileRoute("/about")({
   head: () => ({
     meta: [
-      { title: "About Genelo AI — Founded by Genelo Moses Mwazembe" },
+      { title: "About Genelo AI & GNLTECH — Company, Projects & Founder" },
       {
         name: "description",
         content:
-          "Genelo AI is built by Genelo Moses Mwazembe, a young Tanzanian developer from Vwawa, Songwe. Learn the story, mission, contact details and people behind Genelo AI.",
+          "Genelo AI is part of GNLTECH, a Tanzanian technology business founded by Genelo Moses Mwazembe. Explore its software services, digital platforms and GNL Environment & Investment agricultural project.",
       },
       { name: "author", content: "Genelo Moses Mwazembe" },
-      { property: "og:title", content: "About Genelo AI — Founded by Genelo Moses Mwazembe" },
+      { property: "og:title", content: "About Genelo AI & GNLTECH — Company, Projects & Founder" },
       {
         property: "og:description",
         content:
-          "The story of Genelo AI and its founder Genelo Moses Mwazembe from Songwe, Tanzania.",
+          "Discover GNLTECH, the company behind Genelo AI, its digital services, agricultural trading vision and founder Genelo Moses Mwazembe.",
       },
       { property: "og:type", content: "profile" },
+      { name: "twitter:card", content: "summary_large_image" },
       { property: "og:url", content: `${SITE_ORIGIN}/about` },
       { property: "og:image", content: FOUNDER_IMAGE },
       { name: "twitter:image", content: FOUNDER_IMAGE },
     ],
     links: [{ rel: "canonical", href: `${SITE_ORIGIN}/about` }],
     scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          "@id": "https://gnltech.wuaze.com/#organization",
+          name: "GNLTECH",
+          alternateName: ["GNLTECH.COMPANY.LTD", "GNL Technology"],
+          url: "https://gnltech.wuaze.com/",
+          description: "GNLTECH is a Tanzanian technology-focused business associated with software services and digital platforms including Genelo AI, Genelo Shop and Genelo Pay. Its agricultural project, GNL Environment & Investment, aims to connect farmers and buyers, support crop trading and coordinate distribution using digital tools.",
+          founder: { "@type": "Person", name: "Genelo Moses Mwazembe", url: `${SITE_ORIGIN}/about` },
+          sameAs: ["https://gnltech.wuaze.com/about.php"],
+          subOrganization: { "@type": "Organization", name: "Genelo AI", url: SITE_ORIGIN },
+        }),
+      },
       {
         type: "application/ld+json",
         children: JSON.stringify({
@@ -148,6 +164,52 @@ function AboutPage() {
           Genelo AI is an AI assistant for coding, research, image generation
           and everyday questions — founded and built by{" "}
           <strong>Genelo Moses Mwazembe</strong>.
+        </p>
+
+        <h2 className="mt-10 text-2xl font-semibold">About GNLTECH</h2>
+        <p>
+          GNLTECH (GNLTECH.COMPANY.LTD), also known as GNL Technology, is our
+          Tanzanian technology-focused business behind Genelo AI. Its work brings
+          together software development, digital systems and practical services
+          for agriculture, business and everyday life.
+        </p>
+        <p>
+          Founded by Genelo Moses Mwazembe, GNLTECH aims to simplify business
+          activities, support agricultural trade and make useful technology more
+          accessible to communities. Its digital ecosystem includes Genelo AI
+          for AI assistance, Genelo Shop for online shopping and Genelo Pay for
+          digital payment-related services. Payment features depend on supported
+          services and actual deployment.
+        </p>
+        <h3 className="mt-6 text-xl font-semibold">GNL Environment &amp; Investment</h3>
+        <p>
+          GNL Environment &amp; Investment is GNLTECH’s agricultural project,
+          established on 20 June 2026 according to its official company About
+          page. It aims to connect farmers and buyers, make crop trading easier,
+          open market opportunities and coordinate the distribution of
+          agricultural goods. Digital tools support communication, transaction
+          records and more efficient business processes.
+        </p>
+        <p>
+          Its long-term market vision includes Tanzania, Kenya, Uganda, Zambia,
+          Rwanda and Burundi. Product and service availability depends on
+          operational capacity, delivery coverage and the requirements in each
+          country. The company’s vision is a transparent agricultural trading
+          network that helps farmers reach buyers and creates useful
+          opportunities for communities across Africa.
+        </p>
+        <h3 className="mt-6 text-xl font-semibold">Technology and services</h3>
+        <p>
+          GNLTECH’s stated software technologies include HTML, CSS, JavaScript,
+          PHP and SQL. Its listed services include NextSMS for messaging, Brevo
+          for email and ClickPesa for payments, where configured or enabled.
+          Listing a provider does not confirm that an integration is live.
+        </p>
+        <p>
+          Company information is drawn from the{" "}
+          <a href="https://gnltech.wuaze.com/about.php" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+            official GNLTECH About page
+          </a>.
         </p>
 
         <h2 className="mt-10 text-2xl font-semibold">Who is Genelo Moses Mwazembe?</h2>

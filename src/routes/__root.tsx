@@ -86,8 +86,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:site", content: "@Lovable" },
       { name: "twitter:title", content: "Genelo AI — Code, research, images & answers" },
       { name: "twitter:description", content: "Genelo AI: a professional AI for front-end coding in any language, research, teaching, image generation, Q&A and calculations." },
-      { property: "og:image", content: LOGO_URL },
-      { name: "twitter:image", content: LOGO_URL },
       { name: "google-site-verification", content: "6_JheUIra4dgwC_ct71XoTH6yEGxjizhqaMzrLDn8M4" },
       { name: "yandex-verification", content: "f24238a44a12a0ac" },
     ],
@@ -111,6 +109,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "@type": "Organization",
           name: "Genelo AI",
           url: SITE_ORIGIN,
+          parentOrganization: {
+            "@type": "Organization",
+            "@id": "https://gnltech.wuaze.com/#organization",
+            name: "GNLTECH",
+            alternateName: "GNL Technology",
+            url: "https://gnltech.wuaze.com/",
+          },
           logo: LOGO_URL,
           image: [LOGO_URL, FOUNDER_IMAGE],
           founder: {

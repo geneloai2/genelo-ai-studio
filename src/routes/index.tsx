@@ -66,20 +66,10 @@ export const Route = createFileRoute("/")({
       { property: "og:title", content: "Genelo AI — Code, research, images, calculations" },
       {
         property: "og:description",
-        content: "Genelo AI by Genelo Moses Mwazembe: coding, research, images and calculations.",
+        content: "Genelo AI: coding, research, teaching, images and calculations.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      {
-        property: "og:image",
-        content:
-          "https://geneloai.lovable.app/__l5e/assets-v1/68d35b19-9dec-4b11-b4bd-3d2f1dbda74f/founder-genelo-2.jpg",
-      },
-      {
-        name: "twitter:image",
-        content:
-          "https://geneloai.lovable.app/__l5e/assets-v1/68d35b19-9dec-4b11-b4bd-3d2f1dbda74f/founder-genelo-2.jpg",
-      },
     ],
   }),
   component: HomePage,
@@ -1385,19 +1375,6 @@ function Welcome({
           </button>
         ))}
       </div>
-      <Link
-        to="/about"
-        className="mx-auto mt-6 flex w-fit items-center gap-2 rounded-full border border-border px-2 py-1 pr-4 text-xs text-muted-foreground hover:bg-muted"
-      >
-        <img
-          src="https://geneloai.lovable.app/__l5e/assets-v1/68d35b19-9dec-4b11-b4bd-3d2f1dbda74f/founder-genelo-2.jpg"
-          alt="Genelo Moses Mwazembe — founder of Genelo AI"
-          width={28}
-          height={28}
-          className="h-7 w-7 rounded-full object-cover"
-        />
-        Founded by <strong className="text-foreground">Genelo Moses Mwazembe</strong>
-      </Link>
       {!isNativeApp() && (
         <div className="mt-6 text-center">
           <a
