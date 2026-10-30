@@ -358,8 +358,8 @@ function HomePage() {
         let dataUrl = isZip ? "" : await readFileAsDataURL(f);
         let text: string | undefined;
         if (isImage) {
-          dataUrl = await compressImage(dataUrl);
-          if (dataUrl.length > 1_800_000) dataUrl = await compressImage(dataUrl, 800, 0.65);
+          // Preserve original detail and transparency for image edits.
+          if (dataUrl.length > 12_000_000) dataUrl = await compressImage(dataUrl, 2048, 0.95);
         } else if (isZip) {
           text = await unpackZipToText(f);
         } else if (
@@ -433,14 +433,23 @@ function HomePage() {
     setInput("");
     if (textareaRef.current) textareaRef.current.style.height = "auto";
     setAttachments([]);
-    setStatusSteps(buildStatusSteps(text, atts));
+    setStatusSteps(imgMode
+      ? [atts.some((a) => a.kind === "image") ? "🖼️ Preparing your picture edit…" : "🎨 Creating your image…", "🎨 Creating your image…"]
+      : buildStatusSteps(text, atts));
     setStatusIdx(0);
     setBusy(true);
 
     let finalMessages = baseMessages;
     try {
       if (imgMode) {
-        const r = await imgFn({ data: { modeId: mode, prompt: text } });
+        if (!user) {
+          toast.error("Sign in to create images.");
+          finalMessages = [...baseMessages, { role: "assistant", content: "Please [sign in](/login) to create or edit images." }];
+          setMessages(finalMessages);
+          return;
+        }
+        const references = atts.filter((a) => a.kind === "image" && a.dataUrl?.startsWith("data:image/")).map((a) => a.dataUrl ?? "");
+        const r = await imgFn({ data: { modeId: mode, prompt: text || "Refine this image with sharper details while preserving its subject and style.", references } });
         if (!r.ok) {
           toast.error(r.error);
           finalMessages = [...baseMessages, { role: "assistant", content: `⚠️ ${r.error}` }];
