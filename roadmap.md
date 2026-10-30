@@ -1,4 +1,5 @@
 # Tasks
+- [ ] Improve image detail, sharpness, and reference-picture editing; verify a real generation.
 - [x] Apply GNLTECH’s official logo to the chat shell, admin dashboard and sitemap.
 - [x] Link About to GNLTECH’s website and update company brand metadata.
 - [x] Verify chat branding, About and sitemap in the preview.

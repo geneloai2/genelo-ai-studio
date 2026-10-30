@@ -5,6 +5,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
 import { MODES } from "./modes";
+import { buildImagePrompt } from "./image-prompt";
 
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
@@ -641,6 +642,7 @@ export const chatWithGenelo = createServerFn({ method: "POST" })
 const ImageInput = z.object({
   modeId: z.string().min(1).max(40),
   prompt: z.string().min(1).max(2000),
+  references: z.array(z.string().regex(/^data:image\/(png|jpeg|webp);base64,/).max(12_000_000)).max(4).optional(),
 });
 
 const GENELO_LOGO_URL =
@@ -674,7 +676,7 @@ export const generateImage = createServerFn({ method: "POST" })
     const mode = MODES.find((m) => m.id === data.modeId) ?? MODES[0];
 
     // Genelo AI's own logo is a real asset — never hallucinate it.
-    if (/genelo/i.test(data.prompt) && /\blogo|icon|brand|emblem\b/i.test(data.prompt)) {
+    if (!data.references?.length && /genelo/i.test(data.prompt) && /\blogo|icon|brand|emblem\b/i.test(data.prompt)) {
       return { ok: true as const, url: GENELO_LOGO_URL };
     }
 
@@ -716,24 +718,23 @@ export const generateImage = createServerFn({ method: "POST" })
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash-image",
-        messages: [{ role: "user", content: brandedImagePrompt(data.prompt) }],
+        messages: [{ role: "user", content: [
+          { type: "text", text: buildImagePrompt(brandedImagePrompt(data.prompt), data.references?.length ?? 0) },
+          ...(data.references ?? []).map((url) => ({ type: "image_url", image_url: { url } })),
+        ] }],
         modalities: ["image", "text"],
       }),
     });
 
-    if (resp.status === 429)
-      return { ok: false as const, error: "Rate limit hit, slow down." };
-    if (resp.status === 402)
-      return { ok: false as const, error: "AI credits exhausted." };
     if (!resp.ok) {
-      const t = await resp.text();
-      console.error("Image error", resp.status, t);
-      return { ok: false as const, error: "Image generation failed." };
+      const failure = await resp.json().catch(() => null);
+      const message = failure?.error?.message ?? failure?.message;
+      return { ok: false as const, error: typeof message === "string" ? message : `Image generation failed (${resp.status}). Please try again later.` };
     }
     const j = await resp.json();
     const url: string | undefined =
       j.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-    if (!url) return { ok: false as const, error: "No image returned." };
+    if (!url) return { ok: false as const, error: j.choices?.[0]?.message?.refusal || j.choices?.[0]?.message?.content || "No image was returned. This request has stopped." };
 
     // Increment usage
     if (!isPro) {
