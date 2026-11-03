@@ -14,6 +14,7 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as DocsRouteImport } from './routes/docs'
+import { Route as FounderRouteImport } from './routes/founder'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as PricingRouteImport } from './routes/pricing'
@@ -50,6 +51,11 @@ const ContactRoute = ContactRouteImport.update({
 const DocsRoute = DocsRouteImport.update({
   id: '/docs',
   path: '/docs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FounderRoute = FounderRouteImport.update({
+  id: '/founder',
+  path: '/founder',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -123,6 +129,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/contact': typeof ContactRoute
   '/docs': typeof DocsRoute
+  '/founder': typeof FounderRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/pricing': typeof PricingRoute
@@ -142,6 +149,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/contact': typeof ContactRoute
   '/docs': typeof DocsRoute
+  '/founder': typeof FounderRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/pricing': typeof PricingRoute
@@ -162,6 +170,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/contact': typeof ContactRoute
   '/docs': typeof DocsRoute
+  '/founder': typeof FounderRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/pricing': typeof PricingRoute
@@ -183,6 +192,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/contact'
     | '/docs'
+    | '/founder'
     | '/login'
     | '/mcp'
     | '/pricing'
@@ -202,6 +212,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/contact'
     | '/docs'
+    | '/founder'
     | '/login'
     | '/mcp'
     | '/pricing'
@@ -221,6 +232,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/contact'
     | '/docs'
+    | '/founder'
     | '/login'
     | '/mcp'
     | '/pricing'
@@ -241,6 +253,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   ContactRoute: typeof ContactRoute
   DocsRoute: typeof DocsRoute
+  FounderRoute: typeof FounderRoute
   LoginRoute: typeof LoginRoute
   McpRoute: typeof McpRoute
   PricingRoute: typeof PricingRoute
@@ -290,6 +303,13 @@ declare module '@tanstack/react-router' {
       path: '/docs'
       fullPath: '/docs'
       preLoaderRoute: typeof DocsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/founder': {
+      id: '/founder'
+      path: '/founder'
+      fullPath: '/founder'
+      preLoaderRoute: typeof FounderRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -385,6 +405,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   ContactRoute: ContactRoute,
   DocsRoute: DocsRoute,
+  FounderRoute: FounderRoute,
   LoginRoute: LoginRoute,
   McpRoute: McpRoute,
   PricingRoute: PricingRoute,
