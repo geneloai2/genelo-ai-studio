@@ -16,6 +16,9 @@ export const Route = createFileRoute("/sitemap.xml")({
             { url: FOUNDER, title: "Genelo Moses Mwazembe — founder of Genelo AI" },
             { url: LOGO, title: "GNLTECH — official brand of Genelo AI" },
           ],
+          "/founder": [
+            { url: FOUNDER, title: "Genelo Moses Mwazembe — official photo, founder of Genelo AI and GNLTECH" },
+          ],
           "/blog/meet-the-founder": [
             { url: FOUNDER, title: "Genelo Moses Mwazembe — founder of Genelo AI" },
           ],
@@ -23,6 +26,7 @@ export const Route = createFileRoute("/sitemap.xml")({
         const paths = [
           { path: "/", priority: "1.0", changefreq: "weekly" },
           { path: "/about", priority: "0.9", changefreq: "monthly" },
+          { path: "/founder", priority: "0.9", changefreq: "monthly" },
           { path: "/contact", priority: "0.9", changefreq: "monthly" },
           { path: "/blog", priority: "0.8", changefreq: "weekly" },
           { path: "/blog/welcome-to-genelo-ai", priority: "0.7", changefreq: "monthly" },

@@ -237,6 +237,9 @@ function AboutPage() {
           />
         </div>
         <p>
+          <Link to="/founder" className="text-primary hover:underline">See the official photo of Genelo Moses Mwazembe →</Link>
+        </p>
+        <p>
           Genelo Moses Mwazembe is a young Tanzanian software developer and
           the founder, owner and lead engineer of Genelo AI. He was born and
           raised on Gym Road, Ichenjezya, Vwawa, in the Songwe Region of
